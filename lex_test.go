@@ -20,7 +20,7 @@ func TestLex(t *testing.T) {
 		{"9876543210", []lexToken{{text: "9876543210", kind: tokenNum, pos: 1}}, 0},
 		{"1 0", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: "0", kind: tokenNum, pos: 3}}, 0},
 		{"1.0", []lexToken{{text: "1.0", kind: tokenNum, pos: 1}}, 0},
-		{"-1", []lexToken{{text: "-", kind: tokenIdent, pos: 1}, {text: "1", kind: tokenNum, pos: 2}}, 0},
+		{"-1", []lexToken{{text: "-", kind: tokenOp, pos: 1}, {text: "1", kind: tokenNum, pos: 2}}, 0},
 		{"1e1", []lexToken{{text: "1e1", kind: tokenNum, pos: 1}}, 0},
 		{"1e", []lexToken{{pos: 1}}, 1},
 		{"1e+1", []lexToken{{text: "1e+1", kind: tokenNum, pos: 1}}, 0},
@@ -30,8 +30,8 @@ func TestLex(t *testing.T) {
 		{".", []lexToken{{pos: 1}}, 1},
 		{".1", []lexToken{{text: ".1", kind: tokenNum, pos: 1}}, 0},
 		{".1e1", []lexToken{{text: ".1e1", kind: tokenNum, pos: 1}}, 0},
-		{"1+0", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: "+", kind: tokenIdent, pos: 2}, {text: "0", kind: tokenNum, pos: 3}}, 0},
-		{"1*0", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: "*", kind: tokenIdent, pos: 2}, {text: "0", kind: tokenNum, pos: 3}}, 0},
+		{"1+0", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: "+", kind: tokenOp, pos: 2}, {text: "0", kind: tokenNum, pos: 3}}, 0},
+		{"1*0", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: "*", kind: tokenOp, pos: 2}, {text: "0", kind: tokenNum, pos: 3}}, 0},
 		{"(1)", []lexToken{{text: "(", kind: tokenBracket, pos: 1}, {text: "1", kind: tokenNum, pos: 2}, {text: ")", kind: tokenBracket, pos: 3}}, 0},
 		{"1a", []lexToken{{pos: 1}}, 1},
 		// identifiers
@@ -42,9 +42,9 @@ func TestLex(t *testing.T) {
 		{"_1234_", []lexToken{{text: "_1234_", kind: tokenIdent, pos: 1}}, 0},
 		{"e(", []lexToken{{text: "e", kind: tokenIdent, pos: 1}, {text: "(", kind: tokenBracket, pos: 2}}, 0},
 		// operators
-		{"+", []lexToken{{text: "+", kind: tokenIdent, pos: 1}}, 0},
-		{"++", []lexToken{{text: "+", kind: tokenIdent, pos: 1}, {text: "+", kind: tokenIdent, pos: 2}}, 0},
-		{"a--b", []lexToken{{text: "a", kind: tokenIdent, pos: 1}, {text: "-", kind: tokenIdent, pos: 2}, {text: "-", kind: tokenIdent, pos: 3}, {text: "b", kind: tokenIdent, pos: 4}}, 0},
+		{"+", []lexToken{{text: "+", kind: tokenOp, pos: 1}}, 0},
+		{"++", []lexToken{{text: "+", kind: tokenOp, pos: 1}, {text: "+", kind: tokenOp, pos: 2}}, 0},
+		{"a--b", []lexToken{{text: "a", kind: tokenIdent, pos: 1}, {text: "-", kind: tokenOp, pos: 2}, {text: "-", kind: tokenOp, pos: 3}, {text: "b", kind: tokenIdent, pos: 4}}, 0},
 		// brackets
 		{"()", []lexToken{{text: "(", kind: tokenBracket, pos: 1}, {text: ")", kind: tokenBracket, pos: 2}}, 0},
 		{"[]", []lexToken{{text: "[", kind: tokenBracket, pos: 1}, {text: "]", kind: tokenBracket, pos: 2}}, 0},

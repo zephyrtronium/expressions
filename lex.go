@@ -24,8 +24,10 @@ const (
 	tokenNone tokenKind = iota
 	// tokenNum is an integer, real, or imaginary token.
 	tokenNum
-	// tokenIdent is a variable or operator.
+	// tokenIdent is a variable or function name.
 	tokenIdent
+	// tokenOp is an operator.
+	tokenOp
 	// tokenBracket is a bracket, i.e. ().
 	tokenBracket
 )
@@ -108,7 +110,7 @@ func (l *lexer) next() (lexToken, error) {
 			return tok, nil
 		case strings.ContainsRune(Operators, r):
 			tok.text = string(r)
-			tok.kind = tokenIdent
+			tok.kind = tokenOp
 			return tok, nil
 		case strings.ContainsRune(Brackets, r):
 			tok.text = string(r)
