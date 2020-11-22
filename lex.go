@@ -30,6 +30,8 @@ const (
 	tokenOp
 	// tokenBracket is a bracket, i.e. ().
 	tokenBracket
+	// tokenSep is a function arguments separator, either , or ;.
+	tokenSep
 )
 
 //go:generate go run golang.org/x/tools/cmd/stringer -type=tokenKind -trimprefix=token
@@ -115,6 +117,10 @@ func (l *lexer) next() (lexToken, error) {
 		case strings.ContainsRune(Brackets, r):
 			tok.text = string(r)
 			tok.kind = tokenBracket
+			return tok, nil
+		case r == ',', r == ';':
+			tok.text = string(r)
+			tok.kind = tokenSep
 			return tok, nil
 		default:
 			// Write the rune so that it shows up in the error message.

@@ -13,11 +13,12 @@ func _() {
 	_ = x[tokenIdent-2]
 	_ = x[tokenOp-3]
 	_ = x[tokenBracket-4]
+	_ = x[tokenSep-5]
 }
 
-const _tokenKind_name = "NoneNumIdentOpBracket"
+const _tokenKind_name = "NoneNumIdentOpBracketSep"
 
-var _tokenKind_index = [...]uint8{0, 4, 7, 12, 14, 21}
+var _tokenKind_index = [...]uint8{0, 4, 7, 12, 14, 21, 24}
 
 func (i tokenKind) String() string {
 	if i < 0 || i >= tokenKind(len(_tokenKind_index)-1) {
