@@ -62,9 +62,16 @@ func Parse(src io.RuneScanner, ctx *Context) (*Expr, error) {
 
 // parsectx holds general data for parsing.
 type parsectx struct {
+	// names is the set of variable names that have been seen this parse.
 	names map[string]bool
+	// funcs is the set of function names that trigger special parsing for ids.
 	funcs map[string]Func
-	prec  uint
+	// resv is a reserved parsed node. parsearglist sets this when it parses a
+	// single parenthesized term so that the parser can back it out to an
+	// implicit multiplication if the function is niladic.
+	resv *node
+	// prec is the precision to which to parse numbers.
+	prec uint
 }
 
 // parseterm parses a single term. If there is no error, then parseterm pushes
@@ -78,6 +85,17 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 	}
 	if n == nil {
 		return nil, nil
+	}
+	if p.resv != nil {
+		// parselhs parsed a niladic function followed by a parenthesized term.
+		// So, the parsing here is as if we encountered an open bracket, except
+		// that the contents are already parsed and valid.
+		prec := termprec
+		if !prec.moreBinding(until) {
+			return n, nil
+		}
+		n = &node{kind: nodeMul, left: n, right: p.resv}
+		p.resv = nil
 	}
 	for {
 		tok, err := scan.next()
@@ -169,6 +187,8 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 			if err != nil {
 				return nil, err
 			}
+			// If fn is niladic and the call is like fn(a), then the result
+			// from parsecall is nil, nil, and p.resv is non-nil.
 			n = &node{kind: nodeCall, name: tok.text, right: rhs}
 		}
 	case tokenOp:
@@ -257,8 +277,14 @@ func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (
 			return nil, &BracketError{Col: end.pos, Left: tok.text, Right: end.text}
 		}
 		if !fn.CanCall(len) {
+			if p.resv != nil && fn.CanCall(0) {
+				// If fn is niladic, convert from fn(a) to fn()*a.
+				return nil, nil
+			}
+			p.resv = nil
 			return nil, &CallError{Col: tok.pos, Func: name, Len: len}
 		}
+		p.resv = nil
 		return n, nil
 	case tokenClose, tokenSep, tokenEOF:
 		if !fn.CanCall(0) {
@@ -302,6 +328,12 @@ func parsearglist(scan *lexer, p *parsectx, open string) (*node, int, error) {
 				return nil, 0, nil
 			}
 			l.right = &node{kind: nodeArg, name: pb, left: rhs}
+			if len == 0 {
+				// func(a). If func is niladic, then this is an implicit
+				// multiplication. Reserve the rhs so that the parser can
+				// convert from a function call.
+				p.resv = rhs
+			}
 			return n.right, len + 1, nil
 		case tokenSep:
 			// TODO(zeph): allow e.g. hyper(; ; x) for 0F0;

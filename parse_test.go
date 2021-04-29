@@ -103,6 +103,7 @@ func TestParseTrees(t *testing.T) {
 
 		{"call0", "zero()", "zero"},
 		{"call0-terms", "zero x", "zero()*x"},
+		{"call0-paren", "zero(x)", "zero()*x"},
 		{"call1-bare", "one x", "one(x)"},
 		{"call1-terms", "one a b c * d", "one(a b c) * d"},
 		{"call1-plus", "one + x", "one(+x)"},
@@ -144,6 +145,108 @@ func TestParseTrees(t *testing.T) {
 			d, e := a.n.diff(b.n)
 			if d != nil || e != nil {
 				t.Errorf("mismatched AST:\n\t%q parses %v has %v\n\t%q parses %v has %v", c.a, a.n, d, c.b, b.n, e)
+			}
+		})
+	}
+}
+
+func TestParseExact(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		n    *node
+	}{
+		{
+			name: "call01-paren",
+			src:  "zeroone(x)",
+			n: &node{
+				kind: nodeCall,
+				name: "zeroone",
+				right: &node{
+					kind: nodeArg,
+					name: "",
+					left: &node{
+						kind: nodeName,
+						name: "x",
+					},
+				},
+			},
+		},
+		{
+			name: "call1-paren",
+			src:  "one(x)",
+			n: &node{
+				kind: nodeCall,
+				name: "one",
+				right: &node{
+					kind: nodeArg,
+					name: "",
+					left: &node{
+						kind: nodeName,
+						name: "x",
+					},
+				},
+			},
+		},
+		{
+			name: "call5",
+			src:  "five(a, b; c, d; e)",
+			n: &node{
+				kind: nodeCall,
+				name: "five",
+				right: &node{
+					kind: nodeArg,
+					name: "",
+					left: &node{
+						kind: nodeName,
+						name: "a",
+					},
+					right: &node{
+						kind: nodeArg,
+						name: ",",
+						left: &node{
+							kind: nodeName,
+							name: "b",
+						},
+						right: &node{
+							kind: nodeArg,
+							name: ";",
+							left: &node{
+								kind: nodeName,
+								name: "c",
+							},
+							right: &node{
+								kind: nodeArg,
+								name: ",",
+								left: &node{
+									kind: nodeName,
+									name: "d",
+								},
+								right: &node{
+									kind: nodeArg,
+									name: ";",
+									left: &node{
+										kind: nodeName,
+										name: "e",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	ctx := NewContext(nil, testfns, 64)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			a, err := Parse(strings.NewReader(c.src), ctx)
+			if err != nil {
+				t.Fatalf("%q failed to parse: %v", c.src, err)
+			}
+			d, e := a.n.diff(c.n)
+			if d != nil || e != nil {
+				t.Errorf("mismatched AST:\n\twant %v which has %v\n\tgot  %v which has %v from %q", c.n, e, a.n, d, c.src)
 			}
 		})
 	}
@@ -242,7 +345,6 @@ func TestParseErrors(t *testing.T) {
 		{"nonunary", "*x", new(OperatorError), []string{`(?i)\bunary\b`, `(?i)\bop`, `\*`}, nil},
 		{"sep", "x, y", new(SeparatorError), []string{`","`}, nil},
 		{"sepbrackets", "(x, y)", new(SeparatorError), []string{`","`}, nil},
-		{"call0-one", "zero(x)", new(CallError), []string{`(?i)\bcall\b`, `\bzero\b`, `\b((?i)1|one)\b`}, nil},
 		{"call0-mismatch", "zero(x]", new(BracketError), []string{`(?i)\bbracket\b`, `\(`, `]`}, nil},
 		{"call1-0", "one()", new(CallError), []string{`(?i)\bcall\b`, `\bone\b`, `\b((?i)0|zero)\b`}, nil},
 		{"call1-eof", "one", new(CallError), []string{`(?i)\bcall\b`, `\bone\b`, `\b((?i)0|zero)\b`}, nil},
