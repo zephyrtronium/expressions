@@ -22,27 +22,42 @@ type tokenKind int
 
 const (
 	tokenNone tokenKind = iota
+	// tokenEOF indicates the end of the input.
+	tokenEOF
 	// tokenNum is an integer, real, or imaginary token.
 	tokenNum
 	// tokenIdent is a variable or function name.
 	tokenIdent
 	// tokenOp is an operator.
 	tokenOp
-	// tokenBracket is a bracket, i.e. ().
-	tokenBracket
+	// tokenOpen is an open bracket, e.g. (.
+	tokenOpen
+	// tokenClose is a close bracket, e.g. ).
+	tokenClose
 	// tokenSep is a function arguments separator, either , or ;.
 	tokenSep
 )
 
+//go:generate go mod edit -require=golang.org/x/tools@v0.1.0
+//go:generate go mod download
 //go:generate go run golang.org/x/tools/cmd/stringer -type=tokenKind -trimprefix=token
+//go:generate go mod tidy
 
 // Operators contains the runes which are considered to be operators.
 const Operators = "+-*/^×÷"
 
-// Brackets contains the runes which are considered to group expressions.
-// The parser checks that a bracket in position 2k+1 in this string is matched
-// with the bracket in position 2k, where k starts at 0.
-const Brackets = "()[]{}"
+// OpenBrackets and CloseBrackets contain the runes which group expressions.
+// The parser checks that a bracket in byte position k in OpenBrackets is
+// matched with the bracket in byte position k in ClosedBrackets.
+const (
+	OpenBrackets  = "([{"
+	CloseBrackets = ")]}"
+)
+
+var (
+	openbrackets  = strings.Split(OpenBrackets, "")
+	closebrackets = strings.Split(CloseBrackets, "")
+)
 
 type lexer struct {
 	src  io.RuneScanner
@@ -50,6 +65,8 @@ type lexer struct {
 	rune int
 	byte int
 	lsz  int
+	p    lexToken
+	eof  bool
 }
 
 func lex(src io.RuneScanner) *lexer {
@@ -58,6 +75,25 @@ func lex(src io.RuneScanner) *lexer {
 		rune: 1,
 		byte: 1,
 	}
+}
+
+// push unreads a token so that it is the next token returned from next. Panics
+// if there is already a pushed token.
+func (l *lexer) push(tok lexToken) {
+	if l.p.kind != tokenNone {
+		panic("expressions: double push")
+	}
+	l.p = tok
+}
+
+// must scans the pushed token. Panics if there is no pushed token.
+func (l *lexer) must() lexToken {
+	tok := l.p
+	if tok.kind == tokenNone {
+		panic("expressions: no pushed token")
+	}
+	l.p = lexToken{}
+	return tok
 }
 
 // readRune reads a rune from the src and updates the lexer's position info.
@@ -81,11 +117,28 @@ func (l *lexer) unreadRune() {
 	l.byte -= l.lsz
 }
 
+// next scans the next token from the input. The first time EOF is encountered
+// before any non-whitespace characters, the result is an EOF token with a nil
+// error. Subsequent times, if the EOF token is not pushed, the result is an
+// empty token with io.EOF.
 func (l *lexer) next() (lexToken, error) {
-	l.buf.Reset()
+	if l.p.kind != tokenNone {
+		tok := l.p
+		l.p = lexToken{}
+		return tok, nil
+	}
+	if l.eof {
+		return lexToken{}, io.EOF
+	}
+	defer l.buf.Reset()
 	tok := lexToken{pos: l.rune}
 	for {
 		r, err := l.readRune()
+		if errors.Is(err, io.EOF) {
+			tok.kind = tokenEOF
+			l.eof = true
+			return tok, nil
+		}
 		if err != nil {
 			// TODO: wrap?
 			return tok, err
@@ -114,9 +167,13 @@ func (l *lexer) next() (lexToken, error) {
 			tok.text = string(r)
 			tok.kind = tokenOp
 			return tok, nil
-		case strings.ContainsRune(Brackets, r):
+		case strings.ContainsRune(OpenBrackets, r):
 			tok.text = string(r)
-			tok.kind = tokenBracket
+			tok.kind = tokenOpen
+			return tok, nil
+		case strings.ContainsRune(CloseBrackets, r):
+			tok.text = string(r)
+			tok.kind = tokenClose
 			return tok, nil
 		case r == ',', r == ';':
 			tok.text = string(r)
@@ -154,7 +211,7 @@ func (l *lexer) scanNum() error {
 			l.buf.WriteRune(r)
 			continue
 		}
-		if strings.ContainsRune(Operators, r) || strings.ContainsRune(Brackets, r) {
+		if strings.ContainsRune(Operators, r) || strings.ContainsRune(OpenBrackets+CloseBrackets, r) {
 			l.unreadRune()
 			break
 		}
@@ -212,11 +269,6 @@ func (l *lexer) scanIdent() error {
 	}
 }
 
-func (l *lexer) reset(src io.RuneScanner) {
-	l.src = src
-	l.rune = 0
-}
-
 func (l *lexer) error(kind string) error {
 	return &LexError{
 		Text: l.buf.String(),
@@ -226,7 +278,7 @@ func (l *lexer) error(kind string) error {
 	}
 }
 
-// LexError indicates an invalid token.
+// LexError indicates an invalid token. It implements InputError.
 type LexError struct {
 	// Text is the token the lexer was scanning when the invalid rune was
 	// encountered, plus the invalid rune.
@@ -251,4 +303,8 @@ func (err *LexError) Error() string {
 		return "invalid token at " + pos + ": " + err.Text
 	}
 	return "invalid " + err.Kind + " token at " + pos + ": " + err.Text
+}
+
+func (err *LexError) Pos() int {
+	return err.Col
 }

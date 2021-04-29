@@ -9,16 +9,18 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[tokenNone-0]
-	_ = x[tokenNum-1]
-	_ = x[tokenIdent-2]
-	_ = x[tokenOp-3]
-	_ = x[tokenBracket-4]
-	_ = x[tokenSep-5]
+	_ = x[tokenEOF-1]
+	_ = x[tokenNum-2]
+	_ = x[tokenIdent-3]
+	_ = x[tokenOp-4]
+	_ = x[tokenOpen-5]
+	_ = x[tokenClose-6]
+	_ = x[tokenSep-7]
 }
 
-const _tokenKind_name = "NoneNumIdentOpBracketSep"
+const _tokenKind_name = "NoneEOFNumIdentOpOpenCloseSep"
 
-var _tokenKind_index = [...]uint8{0, 4, 7, 12, 14, 21, 24}
+var _tokenKind_index = [...]uint8{0, 4, 7, 10, 15, 17, 21, 26, 29}
 
 func (i tokenKind) String() string {
 	if i < 0 || i >= tokenKind(len(_tokenKind_index)-1) {
