@@ -52,6 +52,8 @@ func TestLex(t *testing.T) {
 		// calls
 		{"a, b", []lexToken{{text: "a", kind: tokenIdent, pos: 1}, {text: ",", kind: tokenSep, pos: 2}, {text: "b", kind: tokenIdent, pos: 4}, {kind: tokenEOF, pos: 5}}, 0},
 		{"a; b", []lexToken{{text: "a", kind: tokenIdent, pos: 1}, {text: ";", kind: tokenSep, pos: 2}, {text: "b", kind: tokenIdent, pos: 4}, {kind: tokenEOF, pos: 5}}, 0},
+		{"1, 2", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: ",", kind: tokenSep, pos: 2}, {text: "2", kind: tokenNum, pos: 4}, {kind: tokenEOF, pos: 5}}, 0},
+		{"1; 2", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: ";", kind: tokenSep, pos: 2}, {text: "2", kind: tokenNum, pos: 4}, {kind: tokenEOF, pos: 5}}, 0},
 		// erroneous symbols
 		{"$", []lexToken{{pos: 1}, {kind: tokenEOF, pos: 2}}, 1},
 		{"a$", []lexToken{{text: "a", kind: tokenIdent, pos: 1}, {pos: 2}, {kind: tokenEOF, pos: 3}}, 1},

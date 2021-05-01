@@ -211,7 +211,7 @@ func (l *lexer) scanNum() error {
 			l.buf.WriteRune(r)
 			continue
 		}
-		if strings.ContainsRune(Operators, r) || strings.ContainsRune(OpenBrackets+CloseBrackets, r) {
+		if strings.ContainsRune(Operators+OpenBrackets+CloseBrackets+",;", r) {
 			l.unreadRune()
 			break
 		}
