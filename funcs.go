@@ -18,7 +18,8 @@ type Func interface {
 	// semis is the indices of arguments which are preceded by semicolons.
 	// The function may but generally should not look up variables. The
 	// function must set r to its result and should not use the value of r
-	// otherwise. invoc has a length for which CanCall returned true.
+	// otherwise. invoc has a length for which CanCall returned true. Call may
+	// modify the elements of invoc.
 	Call(ctx *Context, invoc []*big.Float, semis []int, r *big.Float) error
 
 	// CanCall returns whether the function can be called with n arguments.
