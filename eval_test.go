@@ -2,6 +2,7 @@ package expressions_test
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"reflect"
@@ -202,4 +203,31 @@ func TestContextVars(t *testing.T) {
 	if y := ctx.Lookup("y"); y == nil || y.Cmp(one) != 0 {
 		t.Errorf("y should be %[1]v at %[1]p but is %[2]v at %[2]p", zero, y)
 	}
+}
+
+func Example() {
+	var (
+		fx   = strings.NewReader("x^3/2 - x")
+		dfx  = strings.NewReader("3 x^2/2 - 1")
+		ddfx = strings.NewReader("3 x")
+	)
+	ctx := expressions.NewContext(nil, nil, 64)
+	a, _ := expressions.Parse(fx, ctx)
+	b, _ := expressions.Parse(dfx, ctx)
+	c, _ := expressions.Parse(ddfx, ctx)
+
+	for i := 0; i < 4; i++ {
+		x := big.NewFloat(float64(i))
+		ctx := ctx.Set("x", x)
+		y := a.Eval(ctx.Clone())
+		yp := b.Eval(ctx.Clone())
+		ypp := c.Eval(ctx.Clone())
+		fmt.Printf("x = %g   y = %-4g  y' = %-4g  y'' = %g\n", x, y, yp, ypp)
+	}
+
+	// Output:
+	// x = 0   y = 0     y' = -1    y'' = 0
+	// x = 1   y = -0.5  y' = 0.5   y'' = 3
+	// x = 2   y = 2     y' = 5     y'' = 6
+	// x = 3   y = 10.5  y' = 12.5  y'' = 9
 }
