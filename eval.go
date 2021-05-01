@@ -60,9 +60,10 @@ func (ctx *Context) Err() error {
 	return ctx.err
 }
 
-// Set sets the value of a variable. Panics if ctx has been or is being used to
-// evaluate an expression and has not been reset since.
-func (ctx *Context) Set(name string, value *big.Float) {
+// Set sets the value of a variable. Returns ctx for chaining. Panics if ctx
+// has been or is being used to evaluate an expression and has not been reset
+// since.
+func (ctx *Context) Set(name string, value *big.Float) *Context {
 	if len(ctx.stack) != 0 {
 		panic("expressions: Context.Set called on used evaluation")
 	}
@@ -70,6 +71,7 @@ func (ctx *Context) Set(name string, value *big.Float) {
 		ctx.names = make(map[string]*big.Float)
 	}
 	ctx.names[name] = new(big.Float).SetPrec(ctx.prec).Set(value)
+	return ctx
 }
 
 // Lookup returns a copy of the value of a variable. If there is no such
@@ -107,6 +109,9 @@ func (ctx *Context) Clone() *Context {
 func (ctx *Context) push() *big.Float {
 	if len(ctx.stack) < cap(ctx.stack) {
 		ctx.stack = ctx.stack[:len(ctx.stack)+1]
+		if ctx.stack[len(ctx.stack)-1] == nil {
+			ctx.stack[len(ctx.stack)-1] = new(big.Float).SetPrec(ctx.prec)
+		}
 	} else {
 		ctx.stack = append(ctx.stack, new(big.Float).SetPrec(ctx.prec))
 	}
