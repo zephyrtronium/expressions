@@ -30,4 +30,6 @@ var testfns = map[string]Func{
 	"one":     mockFunc(1),
 	"zeroone": mockFunc(0, 1),
 	"five":    mockFunc(5),
+	// disable e to make writing tests a bit easier
+	"e": nil,
 }

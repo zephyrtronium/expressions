@@ -22,17 +22,21 @@ var defaultctx = Context{
 	prec:  64,
 }
 
-// NewContext creates a new evaluation context. If funcs is nil, then a default
-// set of basic functions is used instead; to disable all functions, use a
-// non-nil empty map. The same set of functions must be used for parsing and
-// evaluation.
+// NewContext creates a new evaluation context. funcs is a map to merge into
+// the default function set; to disable all functions, use DisableDefaultFuncs,
+// or to disable individual ones, use a map that sets their names to nil. The
+// same set of functions must be used for parsing and evaluation.
 func NewContext(names map[string]*big.Float, funcs map[string]Func, prec uint) *Context {
-	if funcs == nil {
-		funcs = globalfuncs
+	fns := make(map[string]Func, len(globalfuncs)+len(funcs))
+	for k, v := range globalfuncs {
+		fns[k] = v
+	}
+	for k, v := range funcs {
+		fns[k] = v
 	}
 	return &Context{
 		names: names,
-		funcs: funcs,
+		funcs: fns,
 		prec:  prec,
 	}
 }

@@ -59,6 +59,20 @@ func (n *node) diff(m *node) (*node, *node) {
 	return nil, nil
 }
 
+// haskind checks whether a parse tree contains a node of the given type.
+func (n *node) haskind(k nodeKind) bool {
+	if n == nil {
+		return false
+	}
+	if n.kind == k {
+		return true
+	}
+	if n.left.haskind(k) {
+		return true
+	}
+	return n.right.haskind(k)
+}
+
 func TestOpPrecsExist(t *testing.T) {
 	for _, r := range Operators {
 		_, b := binops[string(r)]
@@ -378,6 +392,59 @@ func TestParseErrors(t *testing.T) {
 				if regexp.MustCompile(re).MatchString(msg) {
 					t.Errorf("error message %q matches %s", msg, re)
 				}
+			}
+		})
+	}
+}
+
+func TestDisableDefaultFuncs(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"exp", "exp(x)"},
+		{"ln", "ln(x)"},
+		{"log", "log(x)"},
+		{"sqrt", "sqrt(x)"},
+		{"cos", "cos(x)"},
+		{"sin", "sin(x)"},
+		{"tan", "tan(x)"},
+		{"acos", "acos(x)"},
+		{"asin", "asin(x)"},
+		{"atan", "atan(x)"},
+		{"cosh", "cosh(x)"},
+		{"sinh", "sinh(x)"},
+		{"tanh", "tanh(x)"},
+		{"acosh", "acosh(x)"},
+		{"asinh", "asinh(x)"},
+		{"atanh", "atanh(x)"},
+		{"pi", "pi"},
+		{"e", "e"},
+	}
+	// Check that we cover every case.
+	check := func(n string) bool {
+		for _, c := range cases {
+			if c.name == n {
+				return true
+			}
+		}
+		return false
+	}
+	for k := range globalfuncs {
+		if !check(k) {
+			t.Fatalf("no test case for %q", k)
+		}
+	}
+
+	ctx := NewContext(nil, DisableDefaultFuncs(), 64)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			a, err := Parse(strings.NewReader(c.src), ctx)
+			if err != nil {
+				t.Fatalf("%q failed to parse: %v", c.src, err)
+			}
+			if a.n.haskind(nodeCall) {
+				t.Errorf("call expression in %v", a.n)
 			}
 		})
 	}
