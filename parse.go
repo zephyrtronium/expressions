@@ -28,19 +28,17 @@ type Expr struct {
 	names []string
 }
 
-// Parse parses an expression so it can be evaluated with a context. ctx
-// supplies precision and function names for parsing only; its variable names
-// are ignored. If ctx is nil, a default context is used containing the same
-// functions as the default for NewContext.
+// Parse parses an expression so it can be evaluated with a context. ctx is
+// used only to provide function names during parsing. If ctx is nil, then
+// parsing uses the default functions.
 func Parse(src io.RuneScanner, ctx *Context) (*Expr, error) {
-	if ctx == nil {
-		ctx = &defaultctx
-	}
 	scan := lex(src)
 	p := parsectx{
 		names: make(map[string]bool),
-		funcs: ctx.funcs,
-		prec:  ctx.prec,
+		funcs: globalfuncs,
+	}
+	if ctx != nil {
+		p.funcs = ctx.funcs
 	}
 	n, err := parseterm(scan, &p, exprprec)
 	if err != nil {
@@ -70,8 +68,6 @@ type parsectx struct {
 	// single parenthesized term so that the parser can back it out to an
 	// implicit multiplication if the function is niladic.
 	resv *node
-	// prec is the precision to which to parse numbers.
-	prec uint
 }
 
 // parseterm parses a single term. If there is no error, then parseterm pushes
@@ -173,10 +169,7 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 	var n *node
 	switch tok.kind {
 	case tokenNum:
-		n = &node{kind: nodeNum, num: new(big.Float).SetPrec(p.prec)}
-		if _, ok := n.num.SetString(tok.text); !ok {
-			panic("invalid number text: " + tok.text)
-		}
+		n = &node{kind: nodeNum, name: tok.text}
 	case tokenIdent:
 		fn := p.funcs[tok.text]
 		if fn == nil {
@@ -189,7 +182,7 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 			}
 			// If fn is niladic and the call is like fn(a), then the result
 			// from parsecall is nil, nil, and p.resv is non-nil.
-			n = &node{kind: nodeCall, name: tok.text, right: rhs}
+			n = &node{kind: nodeCall, name: tok.text, fn: fn, right: rhs}
 		}
 	case tokenOp:
 		// unary operator
@@ -394,6 +387,7 @@ func itShouldNotHaveEndedThisWay(tok lexToken, match int) error {
 // function is outside the function's domain, then the result is nil and
 // ctx.Err returns the error.
 func (e *Expr) Eval(ctx *Context) *big.Float {
+	ctx.stack = ctx.stack[:0]
 	if err := e.n.eval(ctx); err != nil {
 		ctx.err = err
 		return nil

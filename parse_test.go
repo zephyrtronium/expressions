@@ -2,6 +2,7 @@ package expressions
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"regexp"
 	"strings"
@@ -28,7 +29,7 @@ func (n *node) diff(m *node) (*node, *node) {
 	}
 	switch n.kind {
 	case nodeNum:
-		if n.num.Cmp(m.num) != 0 {
+		if n.name != m.name {
 			return n, m
 		}
 	case nodeName:
@@ -71,6 +72,34 @@ func (n *node) haskind(k nodeKind) bool {
 		return true
 	}
 	return n.right.haskind(k)
+}
+
+type mockfn struct {
+	can []int
+}
+
+func mockFunc(n ...int) Func {
+	return mockfn{can: n}
+}
+
+func (f mockfn) Call(ctx *Context, invoc []*big.Float, semis []int, r *big.Float) error {
+	return nil
+}
+
+func (f mockfn) CanCall(n int) bool {
+	for _, v := range f.can {
+		if v == n {
+			return true
+		}
+	}
+	return false
+}
+
+var testfns = map[string]Func{
+	"zero":    mockFunc(0),
+	"one":     mockFunc(1),
+	"zeroone": mockFunc(0, 1),
+	"five":    mockFunc(5),
 }
 
 func TestOpPrecsExist(t *testing.T) {
@@ -145,7 +174,7 @@ func TestParseTrees(t *testing.T) {
 		{"pownegpow", "x^-y^-z", "x^(-(y^(-z)))"},
 		{"pownegneg", "x^--y", "x^(-(-y))"},
 	}
-	ctx := NewContext(nil, testfns, 64)
+	ctx := NewContext(DisableDefaultFuncs(), SetFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			a, err := Parse(strings.NewReader(c.a), ctx)
@@ -251,7 +280,7 @@ func TestParseExact(t *testing.T) {
 			},
 		},
 	}
-	ctx := NewContext(nil, testfns, 64)
+	ctx := NewContext(DisableDefaultFuncs(), SetFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			a, err := Parse(strings.NewReader(c.src), ctx)
@@ -318,7 +347,7 @@ func TestExprString(t *testing.T) {
 		{"pownegpow", "x^-y^-z"},
 		{"pownegneg", "x^--y"},
 	}
-	ctx := NewContext(nil, testfns, 64)
+	ctx := NewContext(DisableDefaultFuncs(), SetFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			a, err := Parse(strings.NewReader(c.src), ctx)
@@ -372,7 +401,7 @@ func TestParseErrors(t *testing.T) {
 		{"call5-empty", "five(a,,,,b)", new(SeparatorError), []string{`","`}, nil},
 		{"lexer", "2^exp(-$)", new(LexError), []string{`\$`}, nil},
 	}
-	ctx := NewContext(nil, testfns, 64)
+	ctx := NewContext(DisableDefaultFuncs(), SetFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			a, err := Parse(strings.NewReader(c.src), ctx)
@@ -436,7 +465,7 @@ func TestDisableDefaultFuncs(t *testing.T) {
 		}
 	}
 
-	ctx := NewContext(nil, DisableDefaultFuncs(), 64)
+	ctx := NewContext(DisableDefaultFuncs())
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			a, err := Parse(strings.NewReader(c.src), ctx)

@@ -52,7 +52,7 @@ func TestEval(t *testing.T) {
 		{"e", "e", []vc{{nil, math.E}}},
 		{"exp", "exp 1", []vc{{nil, math.E}}},
 	}
-	ctx := expressions.NewContext(nil, nil, 64)
+	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			a, err := expressions.Parse(strings.NewReader(c.src), ctx)
@@ -105,9 +105,9 @@ func TestEvalUndefNames(t *testing.T) {
 	}
 	ure := regexp.MustCompile(`(?i)\bundef`)
 	vre := regexp.MustCompile(`(?i)\bvar`)
+	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			ctx := expressions.NewContext(nil, nil, 64)
 			a, err := expressions.Parse(strings.NewReader(c.src), ctx)
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
@@ -155,9 +155,9 @@ func TestEvalFuncError(t *testing.T) {
 		{"sqrt", "sqrt(-1)"},
 		{"log", "log(-1)"},
 	}
+	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			ctx := expressions.NewContext(nil, nil, 64)
 			a, err := expressions.Parse(strings.NewReader(c.src), ctx)
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
@@ -182,7 +182,7 @@ func TestEvalFuncError(t *testing.T) {
 func TestContextVars(t *testing.T) {
 	zero := new(big.Float)
 	one := new(big.Float).SetFloat64(1)
-	ctx := expressions.NewContext(map[string]*big.Float{"x": zero}, nil, 64)
+	ctx := expressions.NewContext(expressions.Prec(64), expressions.SetVar("x", zero))
 	if x := ctx.Lookup("x"); x == nil || x.Cmp(zero) != 0 {
 		t.Errorf("x should be %[1]v at %[1]p but is %[2]v at %[2]p", zero, x)
 	}
@@ -211,7 +211,7 @@ func Example() {
 		dfx  = strings.NewReader("3 x^2/2 - 1")
 		ddfx = strings.NewReader("3 x")
 	)
-	ctx := expressions.NewContext(nil, nil, 64)
+	ctx := expressions.NewContext(expressions.Prec(64))
 	a, _ := expressions.Parse(fx, ctx)
 	b, _ := expressions.Parse(dfx, ctx)
 	c, _ := expressions.Parse(ddfx, ctx)

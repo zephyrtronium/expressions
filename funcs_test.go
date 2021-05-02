@@ -1,35 +1,36 @@
-package expressions
+package expressions_test
 
 import (
+	"fmt"
 	"math/big"
+	"strings"
+
+	exprs "github.com/zephyrtronium/expressions"
 )
 
-type mockfn struct {
-	can []int
+type nargin struct{}
+
+func (nargin) CanCall(n int) bool {
+	return true
 }
 
-func mockFunc(n ...int) Func {
-	return mockfn{can: n}
-}
-
-func (f mockfn) Call(ctx *Context, invoc []*big.Float, semis []int, r *big.Float) error {
+func (nargin) Call(ctx *exprs.Context, invoc []*big.Float, semis []int, r *big.Float) error {
+	r.SetInt64(int64(len(invoc)))
 	return nil
 }
 
-func (f mockfn) CanCall(n int) bool {
-	for _, v := range f.can {
-		if v == n {
-			return true
-		}
-	}
-	return false
-}
+func ExampleFunc() {
+	ctx := exprs.NewContext(exprs.SetFunc("nargin", nargin{}), exprs.Prec(32))
 
-var testfns = map[string]Func{
-	"zero":    mockFunc(0),
-	"one":     mockFunc(1),
-	"zeroone": mockFunc(0, 1),
-	"five":    mockFunc(5),
-	// disable e to make writing tests a bit easier
-	"e": nil,
+	a, _ := exprs.Parse(strings.NewReader("nargin"), ctx)
+	b, _ := exprs.Parse(strings.NewReader("nargin 100"), ctx)
+	c, _ := exprs.Parse(strings.NewReader("nargin{3, 2, 1}"), ctx)
+	fmt.Println(a.Eval(ctx), a)
+	fmt.Println(b.Eval(ctx), b)
+	fmt.Println(c.Eval(ctx), c)
+
+	// Output:
+	// 0 (nargin[])
+	// 1 (nargin[(100)])
+	// 3 (nargin[(3), (2), (1)])
 }

@@ -71,16 +71,6 @@ var globalfuncs = map[string]Func{
 	}),
 }
 
-// DisableDefaultFuncs returns a functions map suitable for disabling all
-// default functions when passed as the function set for NewContext.
-func DisableDefaultFuncs() map[string]Func {
-	m := make(map[string]Func, len(globalfuncs))
-	for k := range globalfuncs {
-		m[k] = nil
-	}
-	return m
-}
-
 type monadic struct {
 	f func(out, in *big.Float) *big.Float
 }

@@ -1,7 +1,6 @@
 package expressions
 
 import (
-	"math/big"
 	"strings"
 )
 
@@ -9,8 +8,8 @@ import (
 type node struct {
 	kind nodeKind
 
-	num  *big.Float
 	name string
+	fn   Func
 
 	left  *node
 	right *node
@@ -67,9 +66,7 @@ func (n *node) fmt(b *strings.Builder, square, alt bool) {
 			n.right.fmt(b, square, alt)
 		}
 		b.WriteByte('$')
-	case nodeNum:
-		b.WriteString(n.num.String())
-	case nodeName:
+	case nodeNum, nodeName:
 		b.WriteString(n.name)
 	case nodeCall:
 		b.WriteString(n.name)
