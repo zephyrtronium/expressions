@@ -158,6 +158,7 @@ func TestEvalFuncError(t *testing.T) {
 	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			ctx := ctx.Clone()
 			a, err := expressions.Parse(strings.NewReader(c.src), ctx)
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
@@ -166,14 +167,49 @@ func TestEvalFuncError(t *testing.T) {
 				t.Errorf("evaluating %q gave non-nil result %g", c.src, r)
 			}
 			err = ctx.Err()
-			if ctx.Err() == nil {
+			if err == nil {
 				t.Fatalf("evaluating %q gave no error", c.src)
 			}
 			switch {
 			case !errors.As(err, new(big.ErrNaN)): // do nothing
-			case !errors.As(err, new(expressions.DomainError)): // do nothing
+			case !errors.As(err, new(*expressions.DomainError)): // do nothing
 			default:
 				t.Errorf("%#v is neither *big.ErrNaN nor *expressions.DomainError", err)
+			}
+		})
+	}
+}
+
+func TestEvalOpError(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"div-zero", "0/0"},
+		{"div-inf", "inf/inf"},
+		{"div-alt-zero", "0÷0"},
+		{"div-alt-inf", "inf÷inf"},
+		{"pow-neg", "(-1)^0.5"},
+		{"pow-neg-int", "(-1)^1"},
+	}
+	// oops no way to write inf
+	ctx := expressions.NewContext(expressions.SetVar("inf", new(big.Float).SetInf(false)))
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := ctx.Clone()
+			a, err := expressions.Parse(strings.NewReader(c.src), ctx)
+			if err != nil {
+				t.Fatalf("%q failed to parse: %v", c.src, err)
+			}
+			if r := a.Eval(ctx); r != nil {
+				t.Errorf("evaluating %q gave non-nil result %g", c.src, r)
+			}
+			err = ctx.Err()
+			if err == nil {
+				t.Fatalf("evaluating %q gave no error", c.src)
+			}
+			if _, ok := err.(*expressions.DomainError); !ok {
+				t.Errorf("%#v is not *expressions.DomainError", err)
 			}
 		})
 	}

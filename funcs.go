@@ -83,7 +83,7 @@ func (m monadic) Call(ctx *Context, invoc []*big.Float, semis []int, r *big.Floa
 			return
 		}
 		err = r.(error) // panic if not error
-		if errors.As(err, &DomainError{}) || errors.As(err, &big.ErrNaN{}) {
+		if errors.As(err, new(*DomainError)) || errors.As(err, &big.ErrNaN{}) {
 			return
 		}
 		panic(err)
@@ -134,11 +134,26 @@ type DomainError struct {
 	X *big.Float
 	// Arg is the 1-based index of the argument.
 	Arg int
-	// Func is a name identifying the function.
+	// Func is a name identifying the function. Func may also be "/" to
+	// indicate an invalid division (0/0 or inf/inf), or "^" to represent an
+	// invalid exponentiation (base < 0).
 	Func string
 }
 
-func (err DomainError) Error() string {
+func (err *DomainError) Error() string {
+	switch err.Func {
+	case "/":
+		if err.X.Sign() == 0 {
+			return "invalid division: 0/0"
+		}
+		if err.X.IsInf() {
+			return "invalid division: inf/inf"
+		}
+	case "^":
+		if err.X.Sign() < 0 {
+			return "invalid exponentiation: negative base " + err.X.String()
+		}
+	}
 	r := err.X.String() + " outside domain"
 	if err.Func != "" {
 		r += " of " + err.Func

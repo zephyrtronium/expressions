@@ -353,7 +353,10 @@ func (n *node) eval(ctx *Context) error {
 		}
 		r := ctx.pop()
 		l := ctx.top()
-		// TODO: check for Quo panic
+		// Guard against invalid divisions, 0/0 or inf/inf.
+		if l.Sign() == 0 && r.Sign() == 0 || l.IsInf() && r.IsInf() {
+			return &DomainError{X: r, Func: "/"}
+		}
 		l.Quo(l, r)
 	case nodePow:
 		if err := n.left.eval(ctx); err != nil {
@@ -364,7 +367,11 @@ func (n *node) eval(ctx *Context) error {
 		}
 		r := ctx.pop()
 		l := ctx.top()
-		// TODO: check for Pow panic
+		// Guard against invalid exponentiations, i.e. negative base.
+		// TODO: allow negative base with integer exponent
+		if l.Signbit() {
+			return &DomainError{X: l, Func: "^"}
+		}
 		bigfloat.Pow(l, l, r)
 	case nodeNop:
 		if err := n.left.eval(ctx); err != nil {
