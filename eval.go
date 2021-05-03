@@ -267,6 +267,9 @@ func (ctx *Context) num(s string) *big.Float {
 	if r := ctx.nums[s]; r != nil {
 		return r
 	}
+	if s == "∞" {
+		s = "inf"
+	}
 	r, ok := new(big.Float).SetPrec(ctx.prec).SetString(s)
 	if !ok {
 		panic("expressions: invalid number: " + s)

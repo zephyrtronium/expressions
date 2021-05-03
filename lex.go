@@ -161,7 +161,13 @@ func (l *lexer) next() (lexToken, error) {
 				return tok, err
 			}
 			tok.text = l.buf.String()
-			tok.kind = tokenIdent
+			// inf looks like an identifier, so check for it here.
+			switch tok.text {
+			case "inf", "Inf":
+				tok.kind = tokenNum
+			default:
+				tok.kind = tokenIdent
+			}
 			return tok, nil
 		case strings.ContainsRune(Operators, r):
 			tok.text = string(r)
@@ -178,6 +184,10 @@ func (l *lexer) next() (lexToken, error) {
 		case r == ',', r == ';':
 			tok.text = string(r)
 			tok.kind = tokenSep
+			return tok, nil
+		case r == '∞':
+			tok.text = string(r)
+			tok.kind = tokenNum
 			return tok, nil
 		default:
 			// Write the rune so that it shows up in the error message.

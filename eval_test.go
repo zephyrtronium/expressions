@@ -51,6 +51,9 @@ func TestEval(t *testing.T) {
 		{"pi", "pi", []vc{{nil, math.Pi}}},
 		{"e", "e", []vc{{nil, math.E}}},
 		{"exp", "exp 1", []vc{{nil, math.E}}},
+		{"inf1", "inf", []vc{{nil, math.Inf(0)}}},
+		{"inf2", "Inf", []vc{{nil, math.Inf(0)}}},
+		{"inf3", "∞", []vc{{nil, math.Inf(0)}}},
 	}
 	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
@@ -192,8 +195,7 @@ func TestEvalOpError(t *testing.T) {
 		{"pow-neg", "(-1)^0.5"},
 		{"pow-neg-int", "(-1)^1"},
 	}
-	// oops no way to write inf
-	ctx := expressions.NewContext(expressions.SetVar("inf", new(big.Float).SetInf(false)))
+	ctx := expressions.NewContext()
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ctx := ctx.Clone()

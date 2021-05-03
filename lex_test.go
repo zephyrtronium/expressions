@@ -34,11 +34,15 @@ func TestLex(t *testing.T) {
 		{"1*0", []lexToken{{text: "1", kind: tokenNum, pos: 1}, {text: "*", kind: tokenOp, pos: 2}, {text: "0", kind: tokenNum, pos: 3}, {kind: tokenEOF, pos: 4}}, 0},
 		{"(1)", []lexToken{{text: "(", kind: tokenOpen, pos: 1}, {text: "1", kind: tokenNum, pos: 2}, {text: ")", kind: tokenClose, pos: 3}, {kind: tokenEOF, pos: 4}}, 0},
 		{"1a", []lexToken{{pos: 1}, {kind: tokenEOF, pos: 3}}, 1},
+		{"inf", []lexToken{{text: "inf", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 4}}, 0},
+		{"Inf", []lexToken{{text: "Inf", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 4}}, 0},
+		{"∞", []lexToken{{text: "∞", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 2}}, 0},
 		// identifiers
 		{"e", []lexToken{{text: "e", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 2}}, 0},
 		{"e1", []lexToken{{text: "e1", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 3}}, 0},
 		{"π", []lexToken{{text: "π", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 2}}, 0},
 		{"eπ", []lexToken{{text: "eπ", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 3}}, 0},
+		{"INF", []lexToken{{text: "INF", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 4}}, 0},
 		{"_1234_", []lexToken{{text: "_1234_", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 7}}, 0},
 		{"e(", []lexToken{{text: "e", kind: tokenIdent, pos: 1}, {text: "(", kind: tokenOpen, pos: 2}, {kind: tokenEOF, pos: 3}}, 0},
 		// operators

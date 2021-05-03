@@ -279,6 +279,30 @@ func TestParseExact(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "inf1",
+			src:  "inf",
+			n: &node{
+				kind: nodeNum,
+				name: "inf",
+			},
+		},
+		{
+			name: "inf2",
+			src:  "Inf",
+			n: &node{
+				kind: nodeNum,
+				name: "Inf",
+			},
+		},
+		{
+			name: "inf3",
+			src:  "∞",
+			n: &node{
+				kind: nodeNum,
+				name: "∞",
+			},
+		},
 	}
 	ctx := NewContext(DisableDefaultFuncs(), SetFuncs(testfns))
 	for _, c := range cases {
