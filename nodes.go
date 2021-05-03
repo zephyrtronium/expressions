@@ -20,7 +20,7 @@ type nodeKind int8
 const (
 	nodeNone nodeKind = iota
 
-	nodeNum  // push num
+	nodeNum  // push name parsed as a number, possibly "inf" or "Inf" or "∞"
 	nodeName // push lookup(name)
 
 	// TODO(zeph): how represent e.g. 0F0(; ; z) = exp(z)
