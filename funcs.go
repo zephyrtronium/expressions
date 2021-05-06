@@ -38,14 +38,9 @@ type Func interface {
 }
 
 var globalfuncs = map[string]Func{
-	"exp": Monadic(bigfloat.Exp),
-	"ln":  Monadic(bigfloat.Log),
-	"log": Monadic(func(out, in *big.Float) *big.Float {
-		bigfloat.Log(out, in)
-		in.SetFloat64(10).SetPrec(out.Prec())
-		bigfloat.Log(in, in)
-		return out.Quo(out, in)
-	}),
+	"exp":  Monadic(bigfloat.Exp),
+	"ln":   Monadic(bigfloat.Log),
+	"log":  logfn{},
 	"sqrt": Monadic((*big.Float).Sqrt),
 
 	// trig, not yet implemented in dependencies
@@ -162,4 +157,33 @@ func (err *DomainError) Error() string {
 		r += " (argument " + strconv.Itoa(err.Arg) + ")"
 	}
 	return r
+}
+
+// logfn is the implementation of log(x) and log(x, b).
+type logfn struct{}
+
+var _ Func = logfn{}
+
+func (logfn) Call(ctx *Context, invoc []*big.Float, semis []int, r *big.Float) error {
+	x := invoc[0]
+	if x.Signbit() {
+		return &DomainError{X: x, Arg: 1, Func: "log"}
+	}
+	var b *big.Float
+	if len(invoc) > 1 {
+		b = invoc[1]
+		if b.Signbit() {
+			return &DomainError{X: b, Arg: 2, Func: "log"}
+		}
+	} else {
+		b = big.NewFloat(10).SetPrec(r.Prec())
+	}
+	bigfloat.Log(r, x)
+	bigfloat.Log(x, b)
+	r.Quo(r, x)
+	return nil
+}
+
+func (logfn) CanCall(n int) bool {
+	return n == 1 || n == 2
 }

@@ -54,6 +54,8 @@ func TestEval(t *testing.T) {
 		{"inf1", "inf", []vc{{nil, math.Inf(0)}}},
 		{"inf2", "Inf", []vc{{nil, math.Inf(0)}}},
 		{"inf3", "∞", []vc{{nil, math.Inf(0)}}},
+		{"log", "log 1000", []vc{{nil, 3}}},
+		{"log-base", "log(8, 2)", []vc{{nil, 3}}},
 	}
 	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
@@ -157,6 +159,7 @@ func TestEvalFuncError(t *testing.T) {
 	}{
 		{"sqrt", "sqrt(-1)"},
 		{"log", "log(-1)"},
+		{"log-base", "log(1, -1)"},
 	}
 	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
