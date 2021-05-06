@@ -246,6 +246,36 @@ func TestContextVars(t *testing.T) {
 	}
 }
 
+func BenchmarkEval(b *testing.B) {
+	vars := map[string]*big.Float{
+		"x": big.NewFloat(2),
+		"y": big.NewFloat(3),
+		"z": big.NewFloat(4),
+	}
+	b.Run("nums", func(b *testing.B) {
+		b.ReportAllocs()
+		ctx := expressions.NewContext(expressions.Prec(64))
+		a, err := expressions.Parse(strings.NewReader("2+3+4"), ctx)
+		if err != nil {
+			b.Fatal(err)
+		}
+		for i := 0; i < b.N; i++ {
+			a.Eval(ctx.Clone())
+		}
+	})
+	b.Run("vars", func(b *testing.B) {
+		b.ReportAllocs()
+		ctx := expressions.NewContext(expressions.SetVars(vars), expressions.Prec(64))
+		a, err := expressions.Parse(strings.NewReader("x+y+z"), ctx)
+		if err != nil {
+			b.Fatal(err)
+		}
+		for i := 0; i < b.N; i++ {
+			a.Eval(ctx.Clone())
+		}
+	})
+}
+
 func Example() {
 	var (
 		fx   = strings.NewReader("x^3/2 - x")

@@ -502,3 +502,30 @@ func TestDisableDefaultFuncs(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkParse(b *testing.B) {
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{"descasc", "w^x*y+z+a*b^c"},
+		{"descasc-parens", "(((w^x)*y)+z)+a*(b^c)"},
+		{"ascdesc", "w+x*y^z^a*b+c"},
+		{"ascdesc-parens", "w+((x*(y^(z^a)))*b)+c"},
+		{"call0", "zero()"},
+		{"call0-terms", "zero x"},
+		{"call1-bare", "one x"},
+		{"call5", "five(a; b; c; d; e)"},
+	}
+	ctx := NewContext(DisableDefaultFuncs(), SetFuncs(testfns))
+	for _, c := range cases {
+		b.Run(c.name, func(b *testing.B) {
+			b.ReportAllocs()
+			var src strings.Reader
+			for i := 0; i < b.N; i++ {
+				src.Reset(c.src)
+				Parse(&src, ctx)
+			}
+		})
+	}
+}
