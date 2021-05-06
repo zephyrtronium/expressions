@@ -23,6 +23,7 @@ func TestLex(t *testing.T) {
 		{"-1", []lexToken{{text: "-", kind: tokenOp, pos: 1}, {text: "1", kind: tokenNum, pos: 2}, {kind: tokenEOF, pos: 3}}, 0},
 		{"1e1", []lexToken{{text: "1e1", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 4}}, 0},
 		{"1e", []lexToken{{pos: 1}, {kind: tokenEOF, pos: 3}}, 1},
+		{"1e1e1", []lexToken{{pos: 1}, {kind: tokenNum, text: "1", pos: 5}, {kind: tokenEOF, pos: 6}}, 1},
 		{"1e+1", []lexToken{{text: "1e+1", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 5}}, 0},
 		{"1e-1", []lexToken{{text: "1e-1", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 5}}, 0},
 		{"1.1.1", []lexToken{{pos: 1}, {text: "1", kind: tokenNum, pos: 5}, {kind: tokenEOF, pos: 6}}, 1},
