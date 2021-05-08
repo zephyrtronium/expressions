@@ -63,8 +63,6 @@ type lexer struct {
 	src  io.RuneScanner
 	buf  strings.Builder
 	rune int
-	byte int
-	lsz  int
 	p    lexToken
 	eof  bool
 }
@@ -73,7 +71,6 @@ func lex(src io.RuneScanner) *lexer {
 	return &lexer{
 		src:  src,
 		rune: 1,
-		byte: 1,
 	}
 }
 
@@ -99,10 +96,8 @@ func (l *lexer) must() lexToken {
 // readRune reads a rune from the src and updates the lexer's position info.
 func (l *lexer) readRune() (r rune, err error) {
 	r, sz, err := l.src.ReadRune()
-	l.lsz = sz
 	if sz > 0 {
 		l.rune++
-		l.byte += sz
 	}
 	return r, err
 }
@@ -114,7 +109,6 @@ func (l *lexer) unreadRune() {
 		panic(err)
 	}
 	l.rune--
-	l.byte -= l.lsz
 }
 
 // next scans the next token from the input. The first time EOF is encountered
@@ -284,7 +278,6 @@ func (l *lexer) error(kind string) error {
 		Text: l.buf.String(),
 		Kind: kind,
 		Col:  l.rune,
-		Byte: l.byte,
 	}
 }
 
@@ -300,15 +293,10 @@ type LexError struct {
 	// Col is the total number of runes scanned by the lexer up to and
 	// including this error.
 	Col int
-	// Byte is the total number of bytes scanned by the lexer.
-	Byte int
 }
 
 func (err *LexError) Error() string {
 	pos := "column " + strconv.Itoa(err.Col)
-	if err.Col != err.Byte {
-		pos += " (byte " + strconv.Itoa(err.Byte) + ")"
-	}
 	if err.Kind == "" {
 		return "invalid token at " + pos + ": " + err.Text
 	}
