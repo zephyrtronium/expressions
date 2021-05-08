@@ -6,13 +6,11 @@ import (
 
 // node is a node in the abstract syntax tree of an expression.
 type node struct {
-	kind nodeKind
-
-	name string
-	fn   Func
-
 	left  *node
 	right *node
+	fn    Func
+	name  string
+	kind  nodeKind
 }
 
 type nodeKind int8
