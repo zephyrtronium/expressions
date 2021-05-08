@@ -28,6 +28,7 @@ PowExpr:    Primary | Primary '^' PowExpr
 Primary:    variable | number | CallExpr | '(' Expression ')'
                      | '[' Expression ']' | '{' Expression '}'
 CallExpr:   function | function Term | function ArgList
+                     | function '^' PowExpr Term | function '^' PowExpr ArgList
 ArgList:    '(' ')' | '[' ']' | '{' '}'
                     | '(' ExprList ')' | '[' ExprList ']' | '{' ExprList '}'
 ExprList:   Expression | Expression ',' ExprList | Expression ';' ExprList

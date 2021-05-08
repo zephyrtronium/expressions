@@ -176,13 +176,17 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 			p.names[tok.text] = true
 			n = &node{kind: nodeName, name: tok.text}
 		} else {
-			rhs, err := parsecall(scan, p, until, fn, tok.text)
+			rhs, exp, err := parsecall(scan, p, until, fn, tok.text)
 			if err != nil {
 				return nil, err
 			}
 			// If fn is niladic and the call is like fn(a), then the result
 			// from parsecall is nil, nil, and p.resv is non-nil.
 			n = &node{kind: nodeCall, name: tok.text, fn: fn, right: rhs}
+			if exp != nil {
+				exp.left = n
+				n = exp
+			}
 		}
 	case tokenOp:
 		// unary operator
@@ -229,14 +233,41 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 	return n, nil
 }
 
-// parsecall parses the arguments to a call of a given Func.
-func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (*node, error) {
+// parsecall parses the arguments to a call of a given Func. The second result,
+// if non-nil, is a node that the function call is lhs to.
+func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (*node, *node, error) {
 	tok, err := scan.next()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	switch tok.kind {
-	case tokenNum, tokenIdent, tokenOp:
+	case tokenOp:
+		// Check for e.g. ^2 in cos^2 x. Must be an exponentiation or higher.
+		// Note that the fact that exponentiation is important here:
+		// func^x^y(z) parses as [func(z)]^(x^y).
+		if prec := binops[tok.text]; prec.moreBinding(powprec) {
+			up, err := parseterm(scan, p, powprec)
+			if err != nil {
+				return nil, nil, err
+			}
+			args, ee, err := parsecall(scan, p, until, fn, name)
+			if err != nil {
+				return nil, nil, err
+			}
+			if ee != nil {
+				// The precedence we parsed is right-associative and higher
+				// than any other. With the current rules, there should never
+				// be an additional exponent here.
+				panic("expressions: parsed second call exponent: " + ee.String())
+			}
+			// The caller fills in up.left.
+			exp := &node{kind: nodePow, right: up}
+			return args, exp, nil
+		}
+		// Other than exponentiations, finding an operator is the same as
+		// finding a number or identifier.
+		fallthrough
+	case tokenNum, tokenIdent:
 		switch {
 		case fn.CanCall(1):
 			// Single argument. exp x -> exp(x)
@@ -246,48 +277,48 @@ func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (
 			}
 			rhs, err := parseterm(scan, p, until)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
-			return &node{kind: nodeArg, left: rhs}, nil
+			return &node{kind: nodeArg, left: rhs}, nil, nil
 		case fn.CanCall(0):
 			// No argument. pi x -> (pi) * (x)
 			scan.push(tok)
 		default:
 			// Any other number of arguments requires brackets.
-			return nil, &CallError{Col: tok.pos, Func: name, Len: 1}
+			return nil, nil, &CallError{Col: tok.pos, Func: name, Len: 1}
 		}
 	case tokenOpen:
 		match := rightbracket(tok.text)
 		n, len, err := parsearglist(scan, p, tok.text)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		end := scan.must()
 		if end.kind != tokenClose {
 			panic("expressions: parsearglist ended on " + end.String() + " instead of close bracket")
 		}
 		if end.text != closebrackets[match] {
-			return nil, &BracketError{Col: end.pos, Left: tok.text, Right: end.text}
+			return nil, nil, &BracketError{Col: end.pos, Left: tok.text, Right: end.text}
 		}
 		if !fn.CanCall(len) {
 			if p.resv != nil && fn.CanCall(0) {
 				// If fn is niladic, convert from fn(a) to fn()*a.
-				return nil, nil
+				return nil, nil, nil
 			}
 			p.resv = nil
-			return nil, &CallError{Col: tok.pos, Func: name, Len: len}
+			return nil, nil, &CallError{Col: tok.pos, Func: name, Len: len}
 		}
 		p.resv = nil
-		return n, nil
+		return n, nil, nil
 	case tokenClose, tokenSep, tokenEOF:
 		if !fn.CanCall(0) {
-			return nil, &CallError{Col: tok.pos, Func: name}
+			return nil, nil, &CallError{Col: tok.pos, Func: name}
 		}
 		scan.push(tok)
 	default:
 		panic("expressions: unknown token: " + tok.String())
 	}
-	return nil, nil
+	return nil, nil, nil
 }
 
 // parsearglist parses a bracketed list of zero or more args.
@@ -443,6 +474,8 @@ var (
 	// termprec is the default precedence for parsing terms. Its prec
 	// should match that of multiplication.
 	termprec = operator{5, true, nodeMul}
+	// powprec is the precedence of exponentiation.
+	powprec = binops["^"]
 	// exprprec is the precedence required to parse an entire subexpression.
 	exprprec = operator{-128, true, nodeNone}
 )

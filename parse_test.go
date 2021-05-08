@@ -147,11 +147,13 @@ func TestParseTrees(t *testing.T) {
 		{"call0", "zero()", "zero"},
 		{"call0-terms", "zero x", "zero()*x"},
 		{"call0-paren", "zero(x)", "zero()*x"},
+		{"call0-up", "zero^x(y)", "([zero()]^x)*y"},
 		{"call1-bare", "one x", "one(x)"},
 		{"call1-terms", "one a b c * d", "one(a b c) * d"},
 		{"call1-plus", "one + x", "one(+x)"},
 		{"call1-add", "one x + y", "one(x) + y"},
 		{"call1-exp", "one x^y", "one(x^y)"},
+		{"call1-up", "one ^ x ^ y z", "[one(z)]^(x^y)"},
 		{"call5", "five(a; b; c; d; e)", "five(a, b, c, d, e)"},
 
 		{"add4", "w+x+y+z", "((w+x)+y)+z"},
@@ -173,6 +175,7 @@ func TestParseTrees(t *testing.T) {
 		{"powterms", "x y^z", "x*(y^z)"},
 		{"pownegpow", "x^-y^-z", "x^(-(y^(-z)))"},
 		{"pownegneg", "x^--y", "x^(-(-y))"},
+		{"callpowneg", "one^-x(y)", "[one(y)]^(-x)"},
 	}
 	ctx := NewContext(DisableDefaultFuncs(), SetFuncs(testfns))
 	for _, c := range cases {
