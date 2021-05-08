@@ -134,13 +134,13 @@ func (l *lexer) next() (lexToken, error) {
 	tok := lexToken{pos: l.rune}
 	for {
 		r, err := l.readRune()
-		if errors.Is(err, io.EOF) {
-			tok.kind = tokenEOF
-			l.eof = true
-			return tok, nil
-		}
 		if err != nil {
-			// TODO: wrap?
+			if errors.Is(err, io.EOF) {
+				tok.kind = tokenEOF
+				l.eof = true
+				return tok, nil
+			}
+			// TODO(zeph): wrap?
 			return tok, err
 		}
 		switch {
@@ -201,10 +201,10 @@ func (l *lexer) scanNum() error {
 	var dig, dot, e, le, ed bool
 	for {
 		r, err := l.readRune()
-		if errors.Is(err, io.EOF) {
-			break
-		}
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
 			return err
 		}
 		if unicode.IsSpace(r) {
@@ -259,12 +259,12 @@ func (l *lexer) scanNum() error {
 func (l *lexer) scanIdent() error {
 	for {
 		r, err := l.readRune()
-		if errors.Is(err, io.EOF) {
-			// next unreads the rune that decides ident scanning before calling
-			// scanIdent, so we have scanned at least one rune.
-			return nil
-		}
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				// next unreads the rune that decides ident scanning before
+				// calling scanIdent, so we have scanned at least one rune.
+				return nil
+			}
 			return err
 		}
 		switch {
