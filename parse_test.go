@@ -104,19 +104,19 @@ var testfns = map[string]Func{
 
 func TestOpPrecsExist(t *testing.T) {
 	for _, r := range Operators {
-		_, b := binops[string(r)]
-		_, u := preops[string(r)]
-		if !b && !u {
+		b := binop(string(r))
+		u := unop(string(r))
+		if b.op == nodeNone && u.op == nodeNone {
 			t.Errorf("no operator for %c", r)
 		}
 	}
 }
 
 func TestTermPrecMatchesMultiplication(t *testing.T) {
-	if p := binops["*"].prec; p != termprec.prec {
+	if p := binop("*").prec; p != termprec.prec {
 		t.Errorf("terms have prec %d but * has prec %d", termprec.prec, p)
 	}
-	if p := binops["×"].prec; p != termprec.prec {
+	if p := binop("×").prec; p != termprec.prec {
 		t.Errorf("terms have prec %d but × has prec %d", termprec.prec, p)
 	}
 }

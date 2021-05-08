@@ -124,8 +124,8 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 			n = &node{kind: nodeMul, left: n, right: rhs}
 		case tokenOp:
 			// Binary operator.
-			prec, ok := binops[tok.text]
-			if !ok {
+			prec := binop(tok.text)
+			if prec.op == nodeNone {
 				return nil, &OperatorError{Col: tok.pos, Operator: tok.text, Unary: false}
 			}
 			if !prec.moreBinding(until) {
@@ -199,8 +199,8 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 		}
 	case tokenOp:
 		// unary operator
-		prec, ok := preops[tok.text]
-		if !ok {
+		prec := unop(tok.text)
+		if prec.op == nodeNone {
 			return nil, &OperatorError{Col: tok.pos, Operator: tok.text, Unary: true}
 		}
 		if !prec.moreBinding(until) {
@@ -254,7 +254,7 @@ func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (
 		// Check for e.g. ^2 in cos^2 x. Must be an exponentiation or higher.
 		// Note that the fact that exponentiation is important here:
 		// func^x^y(z) parses as [func(z)]^(x^y).
-		if prec := binops[tok.text]; prec.moreBinding(powprec) {
+		if prec := binop(tok.text); prec.moreBinding(powprec) {
 			up, err := parseterm(scan, p, powprec)
 			if err != nil {
 				return nil, nil, err
@@ -464,27 +464,48 @@ func (p operator) moreBinding(than operator) bool {
 	return p.right
 }
 
+// binop gets a binary operator for a token string. If there is no such binary
+// operator, then the result has an op of nodeNone.
+func binop(text string) operator {
+	switch text {
+	case "+":
+		return operator{1, false, nodeAdd}
+	case "-":
+		return operator{1, false, nodeSub}
+	case "*":
+		return operator{5, false, nodeMul}
+	case "/":
+		return operator{5, false, nodeDiv}
+	case "^":
+		return operator{15, true, nodePow}
+	case "×":
+		return operator{5, false, nodeMul}
+	case "÷":
+		return operator{5, false, nodeDiv}
+	default:
+		return operator{}
+	}
+}
+
+// unop gets a unary operator for a token string. If there is no such unary
+// operator, then the result has an op of nodeNone.
+func unop(text string) operator {
+	switch text {
+	case "+":
+		return operator{10, true, nodeNop}
+	case "-":
+		return operator{10, true, nodeNeg}
+	default:
+		return operator{}
+	}
+}
+
 var (
-	// binops is the binary operators.
-	binops = map[string]operator{
-		"+": {1, false, nodeAdd},
-		"-": {1, false, nodeSub},
-		"*": {5, false, nodeMul},
-		"/": {5, false, nodeDiv},
-		"^": {15, true, nodePow},
-		"×": {5, false, nodeMul},
-		"÷": {5, false, nodeDiv},
-	}
-	// preops is the unary operators.
-	preops = map[string]operator{
-		"+": {10, true, nodeNop},
-		"-": {10, true, nodeNeg},
-	}
 	// termprec is the default precedence for parsing terms. Its prec
 	// should match that of multiplication.
 	termprec = operator{5, true, nodeMul}
 	// powprec is the precedence of exponentiation.
-	powprec = binops["^"]
+	powprec = binop("^")
 	// exprprec is the precedence required to parse an entire subexpression.
 	exprprec = operator{-128, true, nodeNone}
 )
