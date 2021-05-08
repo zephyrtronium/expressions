@@ -515,6 +515,8 @@ func BenchmarkParse(b *testing.B) {
 		{"descasc-parens", "(((w^x)*y)+z)+a*(b^c)"},
 		{"ascdesc", "w+x*y^z^a*b+c"},
 		{"ascdesc-parens", "w+((x*(y^(z^a)))*b)+c"},
+		{"descasc-nums", "1^1.1*1.1e1+1.1e-1+.1*inf^∞"},
+		{"ascdesc-nums", "1+1.1*1.1e1^1.1e-1^.1*inf+∞"},
 		{"call0", "zero()"},
 		{"call0-terms", "zero x"},
 		{"call1-bare", "one x"},
