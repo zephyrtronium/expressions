@@ -3,7 +3,6 @@ package expressions
 import (
 	"io"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -54,8 +53,18 @@ func Parse(src io.RuneScanner, ctx *Context) (*Expr, error) {
 	for k := range p.names {
 		ex.names = append(ex.names, k)
 	}
-	sort.Strings(ex.names)
+	sortstrs(ex.names)
 	return &ex, nil
+}
+
+// sortstrs sorts a string slice without using package sort because that has
+// reflection and allocation problems.
+func sortstrs(names []string) {
+	for i := 1; i < len(names); i++ {
+		for j := i; j > 0 && names[j] < names[j-1]; j-- {
+			names[j], names[j-1] = names[j-1], names[j]
+		}
+	}
 }
 
 // parsectx holds general data for parsing.

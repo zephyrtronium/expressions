@@ -246,6 +246,32 @@ func TestContextVars(t *testing.T) {
 	}
 }
 
+func TestVars(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		vars []string
+	}{
+		{"none", "1+2+3", nil},
+		{"one", "1+2+x", []string{"x"}},
+		{"sort", "z+y+x+w+v+u+t+s+r+q+p+o+n+m+l+k+j+i+h+g+f+e+d+c+b+a", strings.Fields("a b c d e f g h i j k l m n o p q r s t u v w x y z")},
+		{"reuse", "a+b+c+b+a", []string{"a", "b", "c"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := expressions.NewContext(expressions.DisableDefaultFuncs())
+			a, err := expressions.Parse(strings.NewReader(c.src), ctx)
+			if err != nil {
+				t.Fatalf("%q didn't parse: %v", c.src, err)
+			}
+			vars := a.Vars()
+			if !reflect.DeepEqual(vars, c.vars) {
+				t.Errorf("%q gave wrong variable names:\n\twant %q\n\tgot  %q", c.src, c.vars, vars)
+			}
+		})
+	}
+}
+
 func BenchmarkEval(b *testing.B) {
 	vars := map[string]*big.Float{
 		"x": big.NewFloat(2),
