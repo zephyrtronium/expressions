@@ -54,9 +54,18 @@ const (
 	CloseBrackets = ")]}"
 )
 
+func byteidcs(s string) []string {
+	v := make([]string, len(s))
+	for i, r := range s {
+		v[i] = string(r)
+	}
+	return v
+}
+
 var (
-	openbrackets  = strings.Split(OpenBrackets, "")
-	closebrackets = strings.Split(CloseBrackets, "")
+	operstrs      = byteidcs(Operators)
+	openbrackets  = byteidcs(OpenBrackets)
+	closebrackets = byteidcs(CloseBrackets)
 )
 
 type lexer struct {
@@ -163,27 +172,34 @@ func (l *lexer) next() (lexToken, error) {
 				tok.kind = tokenIdent
 			}
 			return tok, nil
-		case strings.ContainsRune(Operators, r):
-			tok.text = string(r)
-			tok.kind = tokenOp
+		case r == ',':
+			tok.text = ","
+			tok.kind = tokenSep
 			return tok, nil
-		case strings.ContainsRune(OpenBrackets, r):
-			tok.text = string(r)
-			tok.kind = tokenOpen
-			return tok, nil
-		case strings.ContainsRune(CloseBrackets, r):
-			tok.text = string(r)
-			tok.kind = tokenClose
-			return tok, nil
-		case r == ',', r == ';':
-			tok.text = string(r)
+		case r == ';':
+			tok.text = ";"
 			tok.kind = tokenSep
 			return tok, nil
 		case r == '∞':
-			tok.text = string(r)
+			tok.text = "∞"
 			tok.kind = tokenNum
 			return tok, nil
 		default:
+			if k := strings.IndexRune(Operators, r); k >= 0 {
+				tok.text = operstrs[k]
+				tok.kind = tokenOp
+				return tok, nil
+			}
+			if k := strings.IndexRune(OpenBrackets, r); k >= 0 {
+				tok.text = openbrackets[k]
+				tok.kind = tokenOpen
+				return tok, nil
+			}
+			if k := strings.IndexRune(CloseBrackets, r); k >= 0 {
+				tok.text = closebrackets[k]
+				tok.kind = tokenClose
+				return tok, nil
+			}
 			// Write the rune so that it shows up in the error message.
 			l.buf.WriteRune(r)
 			return tok, l.error("")
