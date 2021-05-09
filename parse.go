@@ -27,17 +27,15 @@ type Expr struct {
 	names []string
 }
 
-// Parse parses an expression so it can be evaluated with a context. ctx is
-// used only to provide function names during parsing. If ctx is nil, then
-// parsing uses the default functions.
-func Parse(src io.RuneScanner, ctx *Context) (*Expr, error) {
+// Parse parses an expression so it can be evaluated with a context. funcs
+// provides the functions to parse; if nil, then a default set is used. To
+// disable a function, pass a map with its name set to nil. To disable all
+// functions, use DisableDefaultFuncs.
+func Parse(src io.RuneScanner, funcs map[string]Func) (*Expr, error) {
 	scan := lex(src)
 	p := parsectx{
 		names: make(map[string]bool),
-		funcs: globalfuncs,
-	}
-	if ctx != nil {
-		p.funcs = ctx.funcs
+		funcs: globalfuncs(funcs),
 	}
 	n, err := parseterm(scan, &p, exprprec)
 	if err != nil {

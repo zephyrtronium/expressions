@@ -37,33 +37,68 @@ type Func interface {
 	CanCall(n int) bool
 }
 
-var globalfuncs = map[string]Func{
-	"exp":  Monadic(bigfloat.Exp),
-	"ln":   Monadic(bigfloat.Log),
-	"log":  logfn{},
-	"sqrt": Monadic((*big.Float).Sqrt),
+func globalfuncs(aug map[string]Func) map[string]Func {
+	m := map[string]Func{
+		"exp":  Monadic(bigfloat.Exp),
+		"ln":   Monadic(bigfloat.Log),
+		"log":  logfn{},
+		"sqrt": Monadic((*big.Float).Sqrt),
 
-	// trig, not yet implemented in dependencies
-	"cos":   nil,
-	"sin":   nil,
-	"tan":   nil,
-	"acos":  nil,
-	"asin":  nil,
-	"atan":  nil,
-	"cosh":  nil,
-	"sinh":  nil,
-	"tanh":  nil,
-	"acosh": nil,
-	"asinh": nil,
-	"atanh": nil,
+		// trig, not yet implemented in dependencies
+		"cos":   nil,
+		"sin":   nil,
+		"tan":   nil,
+		"acos":  nil,
+		"asin":  nil,
+		"atan":  nil,
+		"cosh":  nil,
+		"sinh":  nil,
+		"tanh":  nil,
+		"acosh": nil,
+		"asinh": nil,
+		"atanh": nil,
 
-	// constants
-	"pi": Niladic(bigfloat.Pi),
-	"e": Niladic(func(out *big.Float) *big.Float {
-		var one big.Float
-		one.SetFloat64(1)
-		return bigfloat.Exp(out, &one)
-	}),
+		// constants
+		"pi": Niladic(bigfloat.Pi),
+		"e": Niladic(func(out *big.Float) *big.Float {
+			var one big.Float
+			one.SetFloat64(1)
+			return bigfloat.Exp(out, &one)
+		}),
+	}
+	for k, v := range aug {
+		m[k] = v
+	}
+	return m
+}
+
+// DisableDefaultFuncs returns a function map that disables all default
+// functions, augmented with funcs.
+func DisableDefaultFuncs(funcs map[string]Func) map[string]Func {
+	m := map[string]Func{
+		"exp":   nil,
+		"ln":    nil,
+		"log":   nil,
+		"sqrt":  nil,
+		"cos":   nil,
+		"sin":   nil,
+		"tan":   nil,
+		"acos":  nil,
+		"asin":  nil,
+		"atan":  nil,
+		"cosh":  nil,
+		"sinh":  nil,
+		"tanh":  nil,
+		"acosh": nil,
+		"asinh": nil,
+		"atanh": nil,
+		"pi":    nil,
+		"e":     nil,
+	}
+	for k, v := range funcs {
+		m[k] = v
+	}
+	return m
 }
 
 type monadic struct {

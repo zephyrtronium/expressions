@@ -15,14 +15,8 @@ type Context struct {
 	stack []*big.Float
 	nums  map[string]*big.Float
 	names map[string]*big.Float
-	funcs map[string]Func
 	prec  uint
 	err   error
-}
-
-var defaultctx = Context{
-	funcs: globalfuncs,
-	prec:  64,
 }
 
 // ContextOption is an option used when creating a context.
@@ -36,19 +30,12 @@ type (
 		val  *big.Float
 	}
 	varsopt map[string]*big.Float
-	funcopt struct {
-		name string
-		fn   Func
-	}
-	funcsopt map[string]Func
-	precopt  uint
+	precopt uint
 )
 
-func (varopt) ctxOption()   {}
-func (varsopt) ctxOption()  {}
-func (funcopt) ctxOption()  {}
-func (funcsopt) ctxOption() {}
-func (precopt) ctxOption()  {}
+func (varopt) ctxOption()  {}
+func (varsopt) ctxOption() {}
+func (precopt) ctxOption() {}
 
 // SetVar sets the value of a variable in the context.
 func SetVar(name string, val *big.Float) ContextOption {
@@ -60,43 +47,6 @@ func SetVars(vars map[string]*big.Float) ContextOption {
 	return varsopt(vars)
 }
 
-// SetFunc adds a function to the context. This only affects parsing. Setting a
-// function to nil disables it.
-func SetFunc(name string, fn Func) ContextOption {
-	return funcopt{name, fn}
-}
-
-// SetFuncs adds any number of functions to the context. This only affects
-// parsing. Setting functions to nil disables them.
-func SetFuncs(fns map[string]Func) ContextOption {
-	return funcsopt(fns)
-}
-
-// DisableDefaultFuncs disables all default functions. This only affects
-// parsing.
-func DisableDefaultFuncs() ContextOption {
-	return funcsopt{
-		"exp":   nil,
-		"ln":    nil,
-		"log":   nil,
-		"sqrt":  nil,
-		"cos":   nil,
-		"sin":   nil,
-		"tan":   nil,
-		"acos":  nil,
-		"asin":  nil,
-		"atan":  nil,
-		"cosh":  nil,
-		"sinh":  nil,
-		"tanh":  nil,
-		"acosh": nil,
-		"asinh": nil,
-		"atanh": nil,
-		"pi":    nil,
-		"e":     nil,
-	}
-}
-
 // Prec sets the precision of calculations.
 func Prec(prec uint) ContextOption {
 	return precopt(prec)
@@ -105,7 +55,7 @@ func Prec(prec uint) ContextOption {
 // NewContext creates a new evaluation context. If no precision is given, the
 // default is 64.
 func NewContext(opts ...ContextOption) *Context {
-	ctx := Context{funcs: globalfuncs, nums: make(map[string]*big.Float), prec: 64}
+	ctx := Context{nums: make(map[string]*big.Float), prec: 64}
 	return ctx.Clone(opts...)
 }
 
@@ -206,32 +156,11 @@ func (ctx *Context) Clone(opts ...ContextOption) *Context {
 			for k, v := range opt {
 				n.names[k] = new(big.Float).SetPrec(n.prec).Set(v)
 			}
-		case funcopt:
-			if n.funcs == nil {
-				n.funcs = make(map[string]Func, len(ctx.funcs)+1)
-				for name, val := range ctx.funcs {
-					n.funcs[name] = val
-				}
-			}
-			n.funcs[opt.name] = opt.fn
-		case funcsopt:
-			if n.funcs == nil {
-				n.funcs = make(map[string]Func, len(ctx.funcs)+1)
-				for name, val := range ctx.funcs {
-					n.funcs[name] = val
-				}
-			}
-			for k, v := range opt {
-				n.funcs[k] = v
-			}
 		case precopt:
 			// Already done. Do nothing.
 		default:
 			panic("expressions: unknown option type")
 		}
-	}
-	if n.funcs == nil {
-		n.funcs = ctx.funcs
 	}
 	return &n
 }
@@ -386,10 +315,11 @@ func (n *node) eval(ctx *Context) error {
 	return nil
 }
 
-// Eval is a shortcut to parse an expression and return its result.
+// Eval is a shortcut to parse an expression and return its result using the
+// default functions.
 func Eval(src io.RuneScanner, opts ...ContextOption) (*big.Float, error) {
 	ctx := NewContext(opts...)
-	a, err := Parse(src, ctx)
+	a, err := Parse(src, nil)
 	if err != nil {
 		return nil, err
 	}
