@@ -285,7 +285,7 @@ func BenchmarkEval(b *testing.B) {
 			b.Fatal(err)
 		}
 		for i := 0; i < b.N; i++ {
-			a.Eval(ctx.Clone())
+			a.Eval(ctx)
 		}
 	})
 	b.Run("vars", func(b *testing.B) {
@@ -296,12 +296,12 @@ func BenchmarkEval(b *testing.B) {
 			b.Fatal(err)
 		}
 		for i := 0; i < b.N; i++ {
-			a.Eval(ctx.Clone())
+			a.Eval(ctx)
 		}
 	})
 }
 
-func Example() {
+func Example_reusing_contexts() {
 	var (
 		fx   = strings.NewReader("x^3/2 - x")
 		dfx  = strings.NewReader("3 x^2/2 - 1")
@@ -315,9 +315,9 @@ func Example() {
 	for i := 0; i < 4; i++ {
 		x := big.NewFloat(float64(i))
 		ctx := ctx.Set("x", x)
-		y := a.Eval(ctx.Clone())
-		yp := b.Eval(ctx.Clone())
-		ypp := c.Eval(ctx.Clone())
+		y := a.Eval(ctx)
+		yp := b.Eval(ctx)
+		ypp := c.Eval(ctx)
 		fmt.Printf("x = %g   y = %-4g  y' = %-4g  y'' = %g\n", x, y, yp, ypp)
 	}
 

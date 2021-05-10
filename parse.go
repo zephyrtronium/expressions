@@ -554,9 +554,17 @@ func itShouldNotHaveEndedThisWay(tok lexToken, match int) error {
 // function is outside the function's domain, then the result is nil and
 // ctx.Err returns the error.
 func (e *Expr) Eval(ctx *Context) *big.Float {
-	ctx.stack = ctx.stack[:0]
-	if err := e.n.eval(ctx); err != nil {
-		ctx.err = err
+	switch len(ctx.stack) {
+	case 0: // do nothing
+	case 1:
+		ctx.stack[0] = new(big.Float).SetPrec(ctx.prec)
+		ctx.stack = ctx.stack[:0]
+	default:
+		panic("expressions: Eval during Eval")
+	}
+	err := e.n.eval(ctx)
+	ctx.err = err
+	if err != nil {
 		return nil
 	}
 	return ctx.Result()

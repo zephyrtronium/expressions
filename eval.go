@@ -83,10 +83,10 @@ func (ctx *Context) Err() error {
 }
 
 // Set sets the value of a variable. Returns ctx for chaining. Calling Set
-// after the context has been used to evaluate an expression panics.
+// while the context is being used to evaluate an expression panics.
 func (ctx *Context) Set(name string, value *big.Float) *Context {
-	if len(ctx.stack) != 0 {
-		panic("expressions: Set on used context")
+	if len(ctx.stack) > 1 {
+		panic("expressions: Set on in-use context")
 	}
 	if ctx.names == nil {
 		ctx.names = make(map[string]*big.Float)
