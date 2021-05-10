@@ -59,6 +59,27 @@ func NewContext(opts ...ContextOption) *Context {
 	return ctx.Clone(opts...)
 }
 
+// Eval evaluates an expression returns the result. If an
+// error occurs, e.g. a missing variable definition or an argument to a
+// function is outside the function's domain, then the result is nil and
+// ctx.Err returns the error.
+func (ctx *Context) Eval(e *Expr) *big.Float {
+	switch len(ctx.stack) {
+	case 0: // do nothing
+	case 1:
+		ctx.stack[0] = new(big.Float).SetPrec(ctx.prec)
+		ctx.stack = ctx.stack[:0]
+	default:
+		panic("expressions: Eval during Eval")
+	}
+	err := e.n.eval(ctx)
+	ctx.err = err
+	if err != nil {
+		return nil
+	}
+	return ctx.Result()
+}
+
 // Result returns the result obtained after evaluating an expression. Panics if
 // ctx has not been used to evaluate an expression. Returns nil if an error
 // occurred during evaluation.
@@ -323,7 +344,7 @@ func Eval(src io.RuneScanner, opts ...ContextOption) (*big.Float, error) {
 	if err != nil {
 		return nil, err
 	}
-	a.Eval(ctx)
+	ctx.Eval(a)
 	return ctx.Result(), ctx.Err()
 }
 

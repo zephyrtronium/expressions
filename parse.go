@@ -2,7 +2,6 @@ package expressions
 
 import (
 	"io"
-	"math/big"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -547,27 +546,6 @@ func itShouldNotHaveEndedThisWay(tok lexToken, match int) error {
 	default:
 		panic("expressions: it really should not have ended this way: " + tok.String())
 	}
-}
-
-// Eval evaluates the expression using a context and returns the result. If an
-// error occurs, e.g. a missing variable definition or an argument to a
-// function is outside the function's domain, then the result is nil and
-// ctx.Err returns the error.
-func (e *Expr) Eval(ctx *Context) *big.Float {
-	switch len(ctx.stack) {
-	case 0: // do nothing
-	case 1:
-		ctx.stack[0] = new(big.Float).SetPrec(ctx.prec)
-		ctx.stack = ctx.stack[:0]
-	default:
-		panic("expressions: Eval during Eval")
-	}
-	err := e.n.eval(ctx)
-	ctx.err = err
-	if err != nil {
-		return nil
-	}
-	return ctx.Result()
 }
 
 // Vars returns the variable names used when evaluating the expression.

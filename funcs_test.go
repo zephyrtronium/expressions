@@ -25,9 +25,9 @@ func ExampleFunc() {
 	a, _ := exprs.Parse(strings.NewReader("nargin"), exprs.ParseFunc("nargin", nargin{}))
 	b, _ := exprs.Parse(strings.NewReader("nargin 100"), exprs.ParseFunc("nargin", nargin{}))
 	c, _ := exprs.Parse(strings.NewReader("nargin{3, 2, 1}"), exprs.ParseFunc("nargin", nargin{}))
-	fmt.Println(a.Eval(ctx), a)
-	fmt.Println(b.Eval(ctx), b)
-	fmt.Println(c.Eval(ctx), c)
+	fmt.Println(ctx.Eval(a), a)
+	fmt.Println(ctx.Eval(b), b)
+	fmt.Println(ctx.Eval(c), c)
 
 	// Output:
 	// 0 (nargin[])

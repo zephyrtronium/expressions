@@ -69,7 +69,7 @@ func TestEval(t *testing.T) {
 				for _, x := range v.vars {
 					ctx.Set(x.n, new(big.Float).SetFloat64(x.v))
 				}
-				r := a.Eval(ctx)
+				r := ctx.Eval(a)
 				if ctx.Err() != nil {
 					t.Error("evaluation error:", ctx.Err())
 				}
@@ -120,7 +120,7 @@ func TestEvalUndefNames(t *testing.T) {
 			if v := a.Vars(); !reflect.DeepEqual(c.r, v) {
 				t.Errorf("%q gave wrong variables: want %q, got %q", c.src, c.r, v)
 			}
-			if r := a.Eval(ctx); r != nil {
+			if r := ctx.Eval(a); r != nil {
 				t.Errorf("evaluating %q gave non-nil result %g", c.src, r)
 			}
 			err = ctx.Err()
@@ -169,7 +169,7 @@ func TestEvalFuncError(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
-			if r := a.Eval(ctx); r != nil {
+			if r := ctx.Eval(a); r != nil {
 				t.Errorf("evaluating %q gave non-nil result %g", c.src, r)
 			}
 			err = ctx.Err()
@@ -206,7 +206,7 @@ func TestEvalOpError(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
-			if r := a.Eval(ctx); r != nil {
+			if r := ctx.Eval(a); r != nil {
 				t.Errorf("evaluating %q gave non-nil result %g", c.src, r)
 			}
 			err = ctx.Err()
@@ -285,7 +285,7 @@ func BenchmarkEval(b *testing.B) {
 			b.Fatal(err)
 		}
 		for i := 0; i < b.N; i++ {
-			a.Eval(ctx)
+			ctx.Eval(a)
 		}
 	})
 	b.Run("vars", func(b *testing.B) {
@@ -296,7 +296,7 @@ func BenchmarkEval(b *testing.B) {
 			b.Fatal(err)
 		}
 		for i := 0; i < b.N; i++ {
-			a.Eval(ctx)
+			ctx.Eval(a)
 		}
 	})
 }
@@ -315,9 +315,9 @@ func Example_reusing_contexts() {
 	for i := 0; i < 4; i++ {
 		x := big.NewFloat(float64(i))
 		ctx := ctx.Set("x", x)
-		y := a.Eval(ctx)
-		yp := b.Eval(ctx)
-		ypp := c.Eval(ctx)
+		y := ctx.Eval(a)
+		yp := ctx.Eval(b)
+		ypp := ctx.Eval(c)
 		fmt.Printf("x = %g   y = %-4g  y' = %-4g  y'' = %g\n", x, y, yp, ypp)
 	}
 
