@@ -60,7 +60,7 @@ func TestEval(t *testing.T) {
 	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := expressions.Parse(strings.NewReader(c.src), nil)
+			a, err := expressions.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatal(c.src, "failed to parse:", err)
 			}
@@ -113,7 +113,7 @@ func TestEvalUndefNames(t *testing.T) {
 	ctx := expressions.NewContext(expressions.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := expressions.Parse(strings.NewReader(c.src), nil)
+			a, err := expressions.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -165,7 +165,7 @@ func TestEvalFuncError(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ctx := ctx.Clone()
-			a, err := expressions.Parse(strings.NewReader(c.src), nil)
+			a, err := expressions.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -202,7 +202,7 @@ func TestEvalOpError(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ctx := ctx.Clone()
-			a, err := expressions.Parse(strings.NewReader(c.src), nil)
+			a, err := expressions.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -259,7 +259,7 @@ func TestVars(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := expressions.Parse(strings.NewReader(c.src), expressions.DisableDefaultFuncs(nil))
+			a, err := expressions.Parse(strings.NewReader(c.src), expressions.DisableDefaultFuncs())
 			if err != nil {
 				t.Fatalf("%q didn't parse: %v", c.src, err)
 			}
@@ -280,7 +280,7 @@ func BenchmarkEval(b *testing.B) {
 	b.Run("nums", func(b *testing.B) {
 		b.ReportAllocs()
 		ctx := expressions.NewContext(expressions.Prec(64))
-		a, err := expressions.Parse(strings.NewReader("2+3+4"), nil)
+		a, err := expressions.Parse(strings.NewReader("2+3+4"))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -291,7 +291,7 @@ func BenchmarkEval(b *testing.B) {
 	b.Run("vars", func(b *testing.B) {
 		b.ReportAllocs()
 		ctx := expressions.NewContext(expressions.SetVars(vars), expressions.Prec(64))
-		a, err := expressions.Parse(strings.NewReader("x+y+z"), nil)
+		a, err := expressions.Parse(strings.NewReader("x+y+z"))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -308,9 +308,9 @@ func Example() {
 		ddfx = strings.NewReader("3 x")
 	)
 	ctx := expressions.NewContext(expressions.Prec(64))
-	a, _ := expressions.Parse(fx, nil)
-	b, _ := expressions.Parse(dfx, nil)
-	c, _ := expressions.Parse(ddfx, nil)
+	a, _ := expressions.Parse(fx)
+	b, _ := expressions.Parse(dfx)
+	c, _ := expressions.Parse(ddfx)
 
 	for i := 0; i < 4; i++ {
 		x := big.NewFloat(float64(i))

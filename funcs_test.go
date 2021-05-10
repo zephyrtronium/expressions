@@ -20,12 +20,11 @@ func (nargin) Call(ctx *exprs.Context, invoc []*big.Float, semis []int, r *big.F
 }
 
 func ExampleFunc() {
-	fns := map[string]exprs.Func{"nargin": nargin{}}
 	ctx := exprs.NewContext(exprs.Prec(32))
 
-	a, _ := exprs.Parse(strings.NewReader("nargin"), fns)
-	b, _ := exprs.Parse(strings.NewReader("nargin 100"), fns)
-	c, _ := exprs.Parse(strings.NewReader("nargin{3, 2, 1}"), fns)
+	a, _ := exprs.Parse(strings.NewReader("nargin"), exprs.ParseFunc("nargin", nargin{}))
+	b, _ := exprs.Parse(strings.NewReader("nargin 100"), exprs.ParseFunc("nargin", nargin{}))
+	c, _ := exprs.Parse(strings.NewReader("nargin{3, 2, 1}"), exprs.ParseFunc("nargin", nargin{}))
 	fmt.Println(a.Eval(ctx), a)
 	fmt.Println(b.Eval(ctx), b)
 	fmt.Println(c.Eval(ctx), c)

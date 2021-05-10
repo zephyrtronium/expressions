@@ -177,14 +177,14 @@ func TestParseTrees(t *testing.T) {
 		{"pownegneg", "x^--y", "x^(-(-y))"},
 		{"callpowneg", "one^-x(y)", "[one(y)]^(-x)"},
 	}
-	fns := DisableDefaultFuncs(testfns)
+	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := Parse(strings.NewReader(c.a), fns)
+			a, err := Parse(strings.NewReader(c.a), preset)
 			if err != nil {
 				t.Fatalf("failed to parse %q: %v", c.a, err)
 			}
-			b, err := Parse(strings.NewReader(c.b), fns)
+			b, err := Parse(strings.NewReader(c.b), preset)
 			if err != nil {
 				t.Fatalf("failed to parse %q: %v", c.b, err)
 			}
@@ -307,10 +307,10 @@ func TestParseExact(t *testing.T) {
 			},
 		},
 	}
-	fns := DisableDefaultFuncs(testfns)
+	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := Parse(strings.NewReader(c.src), fns)
+			a, err := Parse(strings.NewReader(c.src), preset)
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -374,15 +374,15 @@ func TestExprString(t *testing.T) {
 		{"pownegpow", "x^-y^-z"},
 		{"pownegneg", "x^--y"},
 	}
-	fns := DisableDefaultFuncs(testfns)
+	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := Parse(strings.NewReader(c.src), fns)
+			a, err := Parse(strings.NewReader(c.src), preset)
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
 			s := a.String()
-			b, err := Parse(strings.NewReader(s), fns)
+			b, err := Parse(strings.NewReader(s), preset)
 			if err != nil {
 				t.Fatalf("%q -> %q failed to parse: %v", c.src, s, err)
 			}
@@ -428,10 +428,10 @@ func TestParseErrors(t *testing.T) {
 		{"call5-empty", "five(a,,,,b)", new(SeparatorError), []string{`","`}, nil},
 		{"lexer", "2^exp(-$)", new(LexError), []string{`\$`}, nil},
 	}
-	fns := DisableDefaultFuncs(testfns)
+	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := Parse(strings.NewReader(c.src), fns)
+			a, err := Parse(strings.NewReader(c.src), preset)
 			if a != nil {
 				t.Errorf("%q parsed non-nil to %v", c.src, a.n)
 			}
@@ -486,16 +486,15 @@ func TestDisableDefaultFuncs(t *testing.T) {
 		}
 		return false
 	}
-	for k := range globalfuncs(nil) {
+	for k := range globalfuncs {
 		if !check(k) {
 			t.Fatalf("no test case for %q", k)
 		}
 	}
 
-	fns := DisableDefaultFuncs(nil)
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := Parse(strings.NewReader(c.src), fns)
+			a, err := Parse(strings.NewReader(c.src), DisableDefaultFuncs())
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -522,14 +521,14 @@ func BenchmarkParse(b *testing.B) {
 		{"call1-bare", "one x"},
 		{"call5", "five(a; b; c; d; e)"},
 	}
-	fns := DisableDefaultFuncs(testfns)
+	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
 		b.Run(c.name, func(b *testing.B) {
 			b.ReportAllocs()
 			var src strings.Reader
 			for i := 0; i < b.N; i++ {
 				src.Reset(c.src)
-				Parse(&src, fns)
+				Parse(&src, preset)
 			}
 		})
 	}
