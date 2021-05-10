@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/zephyrtronium/expressions"
+	exprs "github.com/zephyrtronium/expressions"
 )
 
 func TestEval(t *testing.T) {
@@ -57,10 +57,10 @@ func TestEval(t *testing.T) {
 		{"log", "log 1000", []vc{{nil, 3}}},
 		{"log-base", "log(8, 2)", []vc{{nil, 3}}},
 	}
-	ctx := expressions.NewContext(expressions.Prec(64))
+	ctx := exprs.NewContext(exprs.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := expressions.Parse(strings.NewReader(c.src))
+			a, err := exprs.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatal(c.src, "failed to parse:", err)
 			}
@@ -110,10 +110,10 @@ func TestEvalUndefNames(t *testing.T) {
 	}
 	ure := regexp.MustCompile(`(?i)\bundef`)
 	vre := regexp.MustCompile(`(?i)\bvar`)
-	ctx := expressions.NewContext(expressions.Prec(64))
+	ctx := exprs.NewContext(exprs.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := expressions.Parse(strings.NewReader(c.src))
+			a, err := exprs.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -127,7 +127,7 @@ func TestEvalUndefNames(t *testing.T) {
 			if ctx.Err() == nil {
 				t.Fatalf("evaluating %q gave no error", c.src)
 			}
-			u, ok := err.(*expressions.NameError)
+			u, ok := err.(*exprs.NameError)
 			if !ok {
 				t.Fatalf("error was %#v, not NameError", err)
 			}
@@ -161,11 +161,11 @@ func TestEvalFuncError(t *testing.T) {
 		{"log", "log(-1)"},
 		{"log-base", "log(1, -1)"},
 	}
-	ctx := expressions.NewContext(expressions.Prec(64))
+	ctx := exprs.NewContext(exprs.Prec(64))
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ctx := ctx.Clone()
-			a, err := expressions.Parse(strings.NewReader(c.src))
+			a, err := exprs.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -178,7 +178,7 @@ func TestEvalFuncError(t *testing.T) {
 			}
 			switch {
 			case !errors.As(err, new(big.ErrNaN)): // do nothing
-			case !errors.As(err, new(*expressions.DomainError)): // do nothing
+			case !errors.As(err, new(*exprs.DomainError)): // do nothing
 			default:
 				t.Errorf("%#v is neither *big.ErrNaN nor *expressions.DomainError", err)
 			}
@@ -198,11 +198,11 @@ func TestEvalOpError(t *testing.T) {
 		{"pow-neg", "(-1)^0.5"},
 		{"pow-neg-int", "(-1)^1"},
 	}
-	ctx := expressions.NewContext()
+	ctx := exprs.NewContext()
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ctx := ctx.Clone()
-			a, err := expressions.Parse(strings.NewReader(c.src))
+			a, err := exprs.Parse(strings.NewReader(c.src))
 			if err != nil {
 				t.Fatalf("%q failed to parse: %v", c.src, err)
 			}
@@ -213,7 +213,7 @@ func TestEvalOpError(t *testing.T) {
 			if err == nil {
 				t.Fatalf("evaluating %q gave no error", c.src)
 			}
-			if _, ok := err.(*expressions.DomainError); !ok {
+			if _, ok := err.(*exprs.DomainError); !ok {
 				t.Errorf("%#v is not *expressions.DomainError", err)
 			}
 		})
@@ -223,7 +223,7 @@ func TestEvalOpError(t *testing.T) {
 func TestContextVars(t *testing.T) {
 	zero := new(big.Float)
 	one := new(big.Float).SetFloat64(1)
-	ctx := expressions.NewContext(expressions.Prec(64), expressions.SetVar("x", zero))
+	ctx := exprs.NewContext(exprs.Prec(64), exprs.SetVar("x", zero))
 	if x := ctx.Lookup("x"); x == nil || x.Cmp(zero) != 0 {
 		t.Errorf("x should be %[1]v at %[1]p but is %[2]v at %[2]p", zero, x)
 	}
@@ -259,7 +259,7 @@ func TestVars(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			a, err := expressions.Parse(strings.NewReader(c.src), expressions.DisableDefaultFuncs())
+			a, err := exprs.Parse(strings.NewReader(c.src), exprs.DisableDefaultFuncs())
 			if err != nil {
 				t.Fatalf("%q didn't parse: %v", c.src, err)
 			}
@@ -272,15 +272,10 @@ func TestVars(t *testing.T) {
 }
 
 func BenchmarkEval(b *testing.B) {
-	vars := map[string]*big.Float{
-		"x": big.NewFloat(2),
-		"y": big.NewFloat(3),
-		"z": big.NewFloat(4),
-	}
 	b.Run("nums", func(b *testing.B) {
 		b.ReportAllocs()
-		ctx := expressions.NewContext(expressions.Prec(64))
-		a, err := expressions.Parse(strings.NewReader("2+3+4"))
+		ctx := exprs.NewContext(exprs.Prec(64))
+		a, err := exprs.Parse(strings.NewReader("2+3+4"))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -290,8 +285,13 @@ func BenchmarkEval(b *testing.B) {
 	})
 	b.Run("vars", func(b *testing.B) {
 		b.ReportAllocs()
-		ctx := expressions.NewContext(expressions.SetVars(vars), expressions.Prec(64))
-		a, err := expressions.Parse(strings.NewReader("x+y+z"))
+		vars := map[string]*big.Float{
+			"x": big.NewFloat(2),
+			"y": big.NewFloat(3),
+			"z": big.NewFloat(4),
+		}
+		ctx := exprs.NewContext(exprs.SetVars(vars), exprs.Prec(64))
+		a, err := exprs.Parse(strings.NewReader("x+y+z"))
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -307,10 +307,10 @@ func Example_reusing_contexts() {
 		dfx  = strings.NewReader("3 x^2/2 - 1")
 		ddfx = strings.NewReader("3 x")
 	)
-	ctx := expressions.NewContext(expressions.Prec(64))
-	a, _ := expressions.Parse(fx)
-	b, _ := expressions.Parse(dfx)
-	c, _ := expressions.Parse(ddfx)
+	ctx := exprs.NewContext(exprs.Prec(64))
+	a, _ := exprs.Parse(fx)
+	b, _ := exprs.Parse(dfx)
+	c, _ := exprs.Parse(ddfx)
 
 	for i := 0; i < 4; i++ {
 		x := big.NewFloat(float64(i))
