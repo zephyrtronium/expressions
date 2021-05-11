@@ -340,7 +340,7 @@ func (n *node) eval(ctx *Context) error {
 // default functions.
 func Eval(src io.RuneScanner, opts ...ContextOption) (*big.Float, error) {
 	ctx := NewContext(opts...)
-	a, err := Parse(src, nil)
+	a, err := Parse(src)
 	if err != nil {
 		return nil, err
 	}
