@@ -39,9 +39,13 @@ func main() {
 		log.Fatalf("precision (%d) must be positive", prec)
 	}
 
-	ins, err := infile(inname, flag.NArg() == 0, nl)
+	var ins []io.RuneScanner
+	f, err := infile(inname, flag.NArg() == 0)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if f != nil {
+		ins = append(ins, f)
 	}
 	for _, arg := range flag.Args() {
 		ins = append(ins, strings.NewReader(arg))
@@ -59,12 +63,26 @@ func main() {
 	}
 
 	var p []*exprs.Expr
+	var opts []exprs.ParseOption
+	if nl {
+		opts = append(opts, exprs.StopOn('\n'))
+	}
 	for _, in := range ins {
-		a, err := exprs.Parse(in)
-		if err != nil {
-			log.Fatal(err)
+		for {
+			// First check whether we're done with the input.
+			if _, _, err := in.ReadRune(); err != nil {
+				if err == io.EOF {
+					break
+				}
+				log.Fatal(err)
+			}
+			in.UnreadRune()
+			a, err := exprs.Parse(in, opts...)
+			if err != nil {
+				log.Fatal(err)
+			}
+			p = append(p, a)
 		}
-		p = append(p, a)
 	}
 
 	verb += "\n"
@@ -81,7 +99,7 @@ func main() {
 	}
 }
 
-func infile(inname string, std, nl bool) ([]io.RuneScanner, error) {
+func infile(inname string, std bool) (io.RuneScanner, error) {
 	var f *os.File
 	switch {
 	case inname != "" && inname != "-":
@@ -96,13 +114,5 @@ func infile(inname string, std, nl bool) ([]io.RuneScanner, error) {
 	if f == nil {
 		return nil, nil
 	}
-	if !nl {
-		return []io.RuneScanner{bufio.NewReader(f)}, nil
-	}
-	var r []io.RuneScanner
-	scan := bufio.NewScanner(f)
-	for scan.Scan() {
-		r = append(r, strings.NewReader(scan.Text()))
-	}
-	return r, scan.Err()
+	return bufio.NewReader(f), nil
 }

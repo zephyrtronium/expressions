@@ -124,7 +124,7 @@ func (l *lexer) unreadRune() {
 // before any non-whitespace characters, the result is an EOF token with a nil
 // error. Subsequent times, if the EOF token is not pushed, the result is an
 // empty token with io.EOF.
-func (l *lexer) next() (lexToken, error) {
+func (l *lexer) next(wseof string) (lexToken, error) {
 	if l.p.kind != tokenNone {
 		tok := l.p
 		l.p = lexToken{}
@@ -148,6 +148,11 @@ func (l *lexer) next() (lexToken, error) {
 		}
 		switch {
 		case unicode.IsSpace(r):
+			if strings.ContainsRune(wseof, r) {
+				tok.kind = tokenEOF
+				l.eof = true
+				return tok, nil
+			}
 			tok.pos++
 			continue
 		case '0' <= r && r <= '9', r == '.':
@@ -218,6 +223,7 @@ func (l *lexer) scanNum() error {
 			return err
 		}
 		if unicode.IsSpace(r) {
+			l.unreadRune()
 			break
 		}
 		if r == '+' || r == '-' {
@@ -280,8 +286,6 @@ func (l *lexer) scanIdent() error {
 		switch {
 		case r == '_', r == '.', unicode.IsLetter(r), unicode.IsDigit(r):
 			l.buf.WriteRune(r)
-		case unicode.IsSpace(r):
-			return nil
 		default:
 			l.unreadRune()
 			return nil

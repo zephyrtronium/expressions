@@ -71,7 +71,7 @@ func TestLex(t *testing.T) {
 	for _, c := range cases {
 		scan := lex(strings.NewReader(c.src))
 		for _, want := range c.tokens {
-			got, err := scan.next()
+			got, err := scan.next("")
 			if err == io.EOF {
 				t.Errorf("scanning %q: expected token %v but got EOF", c.src, want)
 				continue
@@ -87,7 +87,7 @@ func TestLex(t *testing.T) {
 				t.Errorf("scanning %q: unexpected error %v", c.src, err)
 			}
 		}
-		for got, err := scan.next(); err != io.EOF; got, err = scan.next() {
+		for got, err := scan.next(""); err != io.EOF; got, err = scan.next("") {
 			if c.errs > 0 {
 				c.errs--
 			}
@@ -96,5 +96,34 @@ func TestLex(t *testing.T) {
 		if c.errs > 0 {
 			t.Errorf("scanning %q: not enough errors", c.src)
 		}
+	}
+}
+
+func TestLexMulti(t *testing.T) {
+	cases := []struct {
+		name   string
+		src    string
+		ws     string
+		tokens [][]lexToken
+	}{
+		{"newline", "x\nx", "\n", [][]lexToken{{{text: "x", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 2}}, {{text: "x", kind: tokenIdent, pos: 1}, {kind: tokenEOF, pos: 2}}}},
+		{"num", "1\n1", "\n", [][]lexToken{{{text: "1", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 2}}, {{text: "1", kind: tokenNum, pos: 1}, {kind: tokenEOF, pos: 2}}}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			src := strings.NewReader(c.src)
+			for _, tokens := range c.tokens {
+				scan := lex(src)
+				for i, want := range tokens {
+					got, err := scan.next(c.ws)
+					if err != nil {
+						t.Errorf("scanning %q up to %q, iter %d: unexpected error %v", c.src, c.ws, i, err)
+					}
+					if got != want {
+						t.Errorf("scanning %q up to %q, iter %d: want %v, got %v", c.src, c.ws, i, want, got)
+					}
+				}
+			}
+		})
 	}
 }

@@ -505,6 +505,63 @@ func TestDisableDefaultFuncs(t *testing.T) {
 	}
 }
 
+func TestStopOn(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		stop string
+		good [][]nodeKind
+		bad  [][]nodeKind
+		errs []error
+	}{
+		{"newline", "x\nx", "\n", [][]nodeKind{{}, {}}, [][]nodeKind{{nodeMul}, {nodeMul}}, nil},
+		{"comma", "x,x", ",", [][]nodeKind{{}, {}}, [][]nodeKind{{nodeMul, nodeCall}, {nodeMul, nodeCall}}, nil},
+		{"semi", "x;x", ";", [][]nodeKind{{}, {}}, [][]nodeKind{{nodeMul, nodeCall}, {nodeMul, nodeCall}}, nil},
+		{"num", "1\n1", "\n", [][]nodeKind{{}, {}}, [][]nodeKind{{nodeMul}, {nodeMul}}, nil},
+		{"multinl", "x\n\nx", "\n", [][]nodeKind{{}, {}}, [][]nodeKind{{nodeMul}, {nodeMul}}, nil},
+		{"call0", "zero\nx", "\n", [][]nodeKind{{nodeCall}, {nodeName}}, [][]nodeKind{{nodeMul, nodeArg, nodeName}, {nodeMul, nodeArg, nodeCall}}, nil},
+		{"call1-err", "one\nx", "\n", [][]nodeKind{{}, {nodeName}}, [][]nodeKind{{}, {}}, []error{new(CallError)}},
+		{"call1-brackets", "one(\nx)", "\n", [][]nodeKind{{nodeArg}}, [][]nodeKind{{}}, nil},
+		{"start,", ",", ",", [][]nodeKind{{}, {}}, [][]nodeKind{{}, {}}, []error{new(EmptyExpressionError), new(EmptyExpressionError)}},
+		{"start;", ";", ";", [][]nodeKind{{}, {}}, [][]nodeKind{{}, {}}, []error{new(EmptyExpressionError), new(EmptyExpressionError)}},
+	}
+	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
+	for _, c := range cases {
+		if len(c.good) != len(c.bad) {
+			t.Fatalf("case %q has different sizes of good and bad: %v vs %v", c.name, c.good, c.bad)
+		}
+		t.Run(c.name, func(t *testing.T) {
+			src := strings.NewReader(c.src)
+			for i := range c.good {
+				a, err := Parse(src, preset, StopOn([]rune(c.stop)...))
+				if err != nil {
+					switch {
+					case i >= len(c.errs), c.errs[i] == nil:
+						t.Errorf("%q iter %d didn't parse: %v", c.src, i, err)
+					case reflect.TypeOf(err) != reflect.TypeOf(c.errs[i]):
+						t.Errorf("%q iter %d gave wrong error: want %T, got %#v", c.src, i, c.errs[i], err)
+					}
+					continue
+				}
+				for _, good := range c.good[i] {
+					if !a.n.haskind(good) {
+						t.Errorf("%q iter %d didn't have %v", c.src, i, good)
+					}
+				}
+				for _, bad := range c.bad[i] {
+					if a.n.haskind(bad) {
+						t.Errorf("%q iter %d had %v", c.src, i, bad)
+					}
+				}
+			}
+			a, err := Parse(src, preset)
+			if _, ok := err.(*EmptyExpressionError); !ok {
+				t.Errorf("%q after %d iters parsed with error %#v and parse tree %v", c.src, len(c.good), err, a)
+			}
+		})
+	}
+}
+
 func BenchmarkParse(b *testing.B) {
 	cases := []struct {
 		name string

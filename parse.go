@@ -4,6 +4,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -37,6 +38,10 @@ type (
 		fn   Func
 	}
 	funcsopt map[string]Func
+	eofopt   struct {
+		c, s bool
+		ws   string
+	}
 )
 
 // parsectx holds general data for parsing. It is also a ParseOption.
@@ -49,6 +54,12 @@ type parsectx struct {
 	// single parenthesized term so that the parser can back it out to an
 	// implicit multiplication if the function is niladic.
 	resv *node
+	// wseof is a string containing the whitespace characters that trigger an
+	// EOF token from the lexer.
+	wseof string
+	// ceof and seof indicate whether commas and semicolons, respectively, are
+	// allowed at the end of an expression.
+	ceof, seof bool
 	// nodefaults indicates that parse options have set all default functions.
 	nodefaults bool
 }
@@ -127,6 +138,52 @@ var disablefns = funcsopt{
 	"e":     nil,
 }
 
+// StopOn tells the parser to treat a list of characters as ending the
+// expression. Each rune must be a comma, semicolon, or whitespace codepoint.
+// Whitespace does not end an expression where a term is expected, e.g. at the
+// beginning of an expression or following an operator or bracket. Commas and
+// semicolons do not end expressions inside bracketed function argument lists.
+//
+// StopOn overrides the effect of any previous StopOn in the parsing options,
+// including in presets. With no arguments, StopOn produces the default
+// termination behavior, which is to parse to EOF.
+func StopOn(chars ...rune) ParseOption {
+	var o eofopt
+	v := make([]rune, 0, len(chars))
+	have := func(r rune) bool {
+		for _, c := range v {
+			if r == c {
+				return true
+			}
+		}
+		return false
+	}
+	for _, r := range chars {
+		switch {
+		case r == ',':
+			o.c = true
+		case r == ';':
+			o.s = true
+		case unicode.IsSpace(r):
+			if have(r) {
+				continue
+			}
+			v = append(v, r)
+		default:
+			panic("expressions: cannot stop on " + strconv.QuoteRune(r))
+		}
+	}
+	o.ws = string(v)
+	return &o
+}
+
+func (o *eofopt) parseOption(p parsectx) parsectx {
+	p.ceof = o.c
+	p.seof = o.s
+	p.wseof = o.ws
+	return p
+}
+
 // ParsingPreset creates a parsing preset that may be more efficient when using
 // the same non-default parsing options for many calls to Parse. A preset
 // panics when it would change any option from the default, but it is safe to
@@ -149,7 +206,7 @@ func ParsingPreset(opts ...ParseOption) ParseOption {
 }
 
 func (o *parsectx) parseOption(p parsectx) parsectx {
-	if p.funcs != nil {
+	if p.funcs != nil || p.wseof != "" || p.ceof || p.seof {
 		panic("expressions: preset applied to non-default parse config")
 	}
 	p.funcs = o.funcs
@@ -181,7 +238,16 @@ func Parse(src io.RuneScanner, opts ...ParseOption) (*Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if tok := scan.must(); tok.kind != tokenEOF {
+	switch tok := scan.must(); tok.kind {
+	case tokenEOF:
+	case tokenSep:
+		switch {
+		case p.ceof && tok.text == ",":
+		case p.seof && tok.text == ";":
+		default:
+			return nil, itShouldNotHaveEndedThisWay(tok, -1)
+		}
+	default:
 		return nil, itShouldNotHaveEndedThisWay(tok, -1)
 	}
 	ex := Expr{
@@ -229,7 +295,7 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 		p.resv = nil
 	}
 	for {
-		tok, err := scan.next()
+		tok, err := scan.next(p.wseof)
 		if err != nil {
 			return nil, err
 		}
@@ -295,9 +361,11 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 }
 
 // parselhs parses the first component of a term. I.e., operators are unary,
-// and any encountered token must be valid as the start of a subexpression.
+// any encountered token must be valid as the start of a subexpression, and
+// whitespace normally lexed as EOF is ignored.
 func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
-	tok, err := scan.next()
+	// Don't use EOF whitespace for LHS.
+	tok, err := scan.next("")
 	if err != nil {
 		return nil, err
 	}
@@ -359,6 +427,20 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 		scan.push(tok)
 		return nil, nil
 	case tokenSep:
+		switch tok.text {
+		case ",":
+			if p.ceof {
+				scan.push(tok)
+				return nil, nil
+			}
+		case ";":
+			if p.seof {
+				scan.push(tok)
+				return nil, nil
+			}
+		default:
+			panic("expressions: invalid separator " + strconv.Quote(tok.text))
+		}
 		return nil, &SeparatorError{Col: tok.pos, Sep: tok.text}
 	case tokenEOF:
 		return nil, &EmptyExpressionError{Col: tok.pos, End: ""}
@@ -371,7 +453,9 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 // parsecall parses the arguments to a call of a given Func. The second result,
 // if non-nil, is a node that the function call is lhs to.
 func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (*node, *node, error) {
-	tok, err := scan.next()
+	// We respect whitespace here so that pi\nx doesn't string
+	// together expressions.
+	tok, err := scan.next(p.wseof)
 	if err != nil {
 		return nil, nil, err
 	}
