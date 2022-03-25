@@ -373,6 +373,9 @@ func TestExprString(t *testing.T) {
 		{"powterms", "x y^z"},
 		{"pownegpow", "x^-y^-z"},
 		{"pownegneg", "x^--y"},
+
+		// Cases isolated with fuzzing.
+		{"parentermsplus", "x(y+z)"},
 	}
 	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
