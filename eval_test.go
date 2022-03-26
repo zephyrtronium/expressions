@@ -197,6 +197,8 @@ func TestEvalOpError(t *testing.T) {
 		{"div-alt-inf", "inf÷inf"},
 		{"pow-neg", "(-1)^0.5"},
 		{"pow-neg-int", "(-1)^1"},
+		{"mul-inf-zero", "inf*0"},
+		{"mul-zero-inf", "0*inf"},
 	}
 	ctx := exprs.NewContext()
 	for _, c := range cases {

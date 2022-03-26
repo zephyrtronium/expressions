@@ -303,6 +303,13 @@ func (n *node) eval(ctx *Context) error {
 		}
 		r := ctx.pop()
 		l := ctx.top()
+		// Guard against invalid multiplications, 0*inf or inf*0.
+		if l.Sign() == 0 && r.IsInf() || l.IsInf() && r.Sign() == 0 {
+			if l.IsInf() {
+				r = l
+			}
+			return &DomainError{X: r, Func: "*"}
+		}
 		l.Mul(l, r)
 	case nodeDiv:
 		if err := n.left.eval(ctx); err != nil {
