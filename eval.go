@@ -220,9 +220,16 @@ func (ctx *Context) num(s string) *big.Float {
 	if s == "∞" {
 		s = "inf"
 	}
-	r, ok := new(big.Float).SetPrec(ctx.prec).SetString(s)
-	if !ok {
-		panic("expressions: invalid number: " + s)
+	r, _, err := new(big.Float).SetPrec(ctx.prec).Parse(s, 0)
+	switch {
+	case err == nil: // do nothing
+	case err.Error() == "exponent overflow",
+		strings.HasSuffix(err.Error(), ": value out of range"):
+		// There isn't realistically any better way to detect this error.
+		// N.B. s is non-empty, otherwise we couldn't overflow.
+		r = new(big.Float).SetInf(s[0] == '-')
+	default:
+		panic("expressions: invalid number: " + s + " (" + err.Error() + ")")
 	}
 	ctx.nums[s] = r
 	return r
