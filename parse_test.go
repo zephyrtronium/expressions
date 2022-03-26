@@ -434,6 +434,7 @@ func TestParseErrors(t *testing.T) {
 
 		// Cases identified with fuzzing.
 		{"op-paren", "(b*)", new(EmptyExpressionError), []string{`\)`}, nil},
+		{"haskell", "(+)", new(EmptyExpressionError), []string{`\)`}, nil},
 	}
 	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {

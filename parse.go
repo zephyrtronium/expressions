@@ -409,6 +409,9 @@ func parselhs(scan *lexer, p *parsectx, until operator) (*node, error) {
 		if err != nil {
 			return nil, err
 		}
+		if rhs == nil {
+			return nil, &EmptyExpressionError{Col: tok.pos, End: scan.must().text}
+		}
 		n = &node{kind: prec.op, left: rhs}
 	case tokenOpen:
 		match := rightbracket(tok.text)
