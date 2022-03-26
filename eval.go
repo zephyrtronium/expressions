@@ -283,6 +283,10 @@ func (n *node) eval(ctx *Context) error {
 		}
 		r := ctx.pop()
 		l := ctx.top()
+		// Guard against invalid additions, inf+-inf or -inf+inf.
+		if l.IsInf() && r.IsInf() && l.Signbit() != r.Signbit() {
+			return &DomainError{X: r, Func: "+"}
+		}
 		l.Add(l, r)
 	case nodeSub:
 		if err := n.left.eval(ctx); err != nil {
@@ -293,6 +297,10 @@ func (n *node) eval(ctx *Context) error {
 		}
 		r := ctx.pop()
 		l := ctx.top()
+		// Guard against invalid subtractions, inf-inf or -inf--inf.
+		if l.IsInf() && r.IsInf() && l.Signbit() == r.Signbit() {
+			return &DomainError{X: r, Func: "-"}
+		}
 		l.Sub(l, r)
 	case nodeMul:
 		if err := n.left.eval(ctx); err != nil {

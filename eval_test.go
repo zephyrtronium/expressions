@@ -199,6 +199,10 @@ func TestEvalOpError(t *testing.T) {
 		{"pow-neg-int", "(-1)^1"},
 		{"mul-inf-zero", "inf*0"},
 		{"mul-zero-inf", "0*inf"},
+		{"add-inf-neg", "inf+-inf"},
+		{"add-neg-inf", "-inf+inf"},
+		{"sub-inf", "inf-inf"},
+		{"sub-neg-inf", "-inf--inf"},
 	}
 	ctx := exprs.NewContext()
 	for _, c := range cases {
