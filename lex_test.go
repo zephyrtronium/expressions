@@ -66,6 +66,8 @@ func TestLex(t *testing.T) {
 		{"0$", []lexToken{{pos: 1}, {kind: tokenEOF, pos: 3}}, 1},
 		{"$0", []lexToken{{pos: 1}, {text: "0", kind: tokenNum, pos: 2}, {kind: tokenEOF, pos: 3}}, 1},
 		{"$$", []lexToken{{pos: 1}, {pos: 2}, {kind: tokenEOF, pos: 3}}, 2},
+		// cases identified with fuzzing
+		{"0E0.", []lexToken{{pos: 1}, {kind: tokenEOF, pos: 5}}, 1},
 	}
 
 	for _, c := range cases {

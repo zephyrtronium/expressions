@@ -244,7 +244,7 @@ func (l *lexer) scanNum() error {
 		l.buf.WriteRune(r)
 		switch r {
 		case '.':
-			if dot {
+			if dot || e {
 				return l.error("number")
 			}
 			dot = true
