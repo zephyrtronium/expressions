@@ -376,6 +376,7 @@ func TestExprString(t *testing.T) {
 
 		// Cases isolated with fuzzing.
 		{"parentermsplus", "x(y+z)"},
+		{"mulparenterms", "x*y(z*w)"},
 	}
 	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {

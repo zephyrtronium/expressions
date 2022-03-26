@@ -338,7 +338,7 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 				scan.push(tok)
 				return n, nil
 			}
-			rhs, err := parseterm(scan, p, until)
+			rhs, err := parseterm(scan, p, exprprec)
 			if err != nil {
 				return nil, err
 			}
