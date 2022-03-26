@@ -431,6 +431,9 @@ func TestParseErrors(t *testing.T) {
 		{"call5-bare", "five x", new(CallError), []string{`(?i)\bcall\b`, `\bfive\b`, `\b((?i)1|one)\b`}, nil},
 		{"call5-empty", "five(a,,,,b)", new(SeparatorError), []string{`","`}, nil},
 		{"lexer", "2^exp(-$)", new(LexError), []string{`\$`}, nil},
+
+		// Cases identified with fuzzing.
+		{"op-paren", "(b*)", new(EmptyExpressionError), []string{`\)`}, nil},
 	}
 	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
@@ -441,6 +444,9 @@ func TestParseErrors(t *testing.T) {
 			}
 			if reflect.TypeOf(err) != reflect.TypeOf(c.err) {
 				t.Errorf("wrong error type from %q: want %T, got %T", c.src, c.err, err)
+			}
+			if err == nil {
+				return
 			}
 			msg := err.Error()
 			for _, re := range c.res {

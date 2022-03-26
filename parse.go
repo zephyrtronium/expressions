@@ -328,6 +328,9 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 			if err != nil {
 				return nil, err
 			}
+			if rhs == nil {
+				return nil, &EmptyExpressionError{Col: tok.pos, End: scan.must().text}
+			}
 			n = &node{kind: prec.op, left: n, right: rhs}
 		case tokenOpen:
 			// Since parselhs parses functions aggressively, this is a
