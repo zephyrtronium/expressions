@@ -148,12 +148,14 @@ func TestParseTrees(t *testing.T) {
 		{"call0-terms", "zero x", "zero()*x"},
 		{"call0-paren", "zero(x)", "zero()*x"},
 		{"call0-up", "zero^x(y)", "([zero()]^x)*y"},
+		{"call0-callup", "zero^zero(x)^y", "(zero^zero)*(x^y)"},
 		{"call1-bare", "one x", "one(x)"},
 		{"call1-terms", "one a b c * d", "one(a b c) * d"},
 		{"call1-plus", "one + x", "one(+x)"},
 		{"call1-add", "one x + y", "one(x) + y"},
 		{"call1-exp", "one x^y", "one(x^y)"},
 		{"call1-up", "one ^ x ^ y z", "[one(z)]^(x^y)"},
+		{"call1-call0up", "one^zero(x)", "[one(x)]^zero"},
 		{"call5", "five(a; b; c; d; e)", "five(a, b, c, d, e)"},
 
 		{"add4", "w+x+y+z", "((w+x)+y)+z"},
@@ -377,6 +379,7 @@ func TestExprString(t *testing.T) {
 		// Cases isolated with fuzzing.
 		{"parentermsplus", "x(y+z)"},
 		{"mulparenterms", "x*y(z*w)"},
+		{"doubleexp", "zero^zero(0)^0"},
 	}
 	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {

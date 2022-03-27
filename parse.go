@@ -291,9 +291,20 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 		if !prec.moreBinding(until) {
 			return n, nil
 		}
-		n = &node{kind: nodeMul, left: n, right: p.resv}
+		r := p.resv
 		p.resv = nil
+		r, err := parseonto(scan, p, prec, r)
+		if err != nil {
+			return nil, err
+		}
+		n = &node{kind: nodeMul, left: n, right: r}
+		return n, nil
 	}
+	return parseonto(scan, p, until, n)
+}
+
+// parseonto parses assuming that n is the lhs of the expression.
+func parseonto(scan *lexer, p *parsectx, until operator, n *node) (*node, error) {
 	for {
 		tok, err := scan.next(p.wseof)
 		if err != nil {
@@ -474,6 +485,25 @@ func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (
 			up, err := parseterm(scan, p, powprec)
 			if err != nil {
 				return nil, nil, err
+			}
+			if p.resv != nil {
+				// The exponentiated term was itself a niladic function with a
+				// parenthesized expression following it, like fn^pi(x), where
+				// p.resv is (x). If we can call fn with one argument, then x
+				// is it; if zero, then x is an implicit multiplication.
+				switch {
+				case fn.CanCall(1):
+					args := &node{kind: nodeArg, left: p.resv}
+					exp := &node{kind: nodePow, right: up}
+					p.resv = nil
+					return args, exp, nil
+				case fn.CanCall(0):
+					exp := &node{kind: nodePow, right: up}
+					// Leave resv to the caller.
+					return nil, exp, nil
+				default:
+					return nil, nil, &CallError{Col: tok.pos, Func: name, Len: 1}
+				}
 			}
 			args, ee, err := parsecall(scan, p, until, fn, name)
 			if err != nil {
