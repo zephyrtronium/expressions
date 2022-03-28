@@ -298,7 +298,6 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 			return nil, err
 		}
 		n = &node{kind: nodeMul, left: n, right: r}
-		return n, nil
 	}
 	return parseonto(scan, p, until, n)
 }

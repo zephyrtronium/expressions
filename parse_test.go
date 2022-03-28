@@ -178,6 +178,9 @@ func TestParseTrees(t *testing.T) {
 		{"pownegpow", "x^-y^-z", "x^(-(y^(-z)))"},
 		{"pownegneg", "x^--y", "x^(-(-y))"},
 		{"callpowneg", "one^-x(y)", "[one(y)]^(-x)"},
+
+		{"call0-mul", "zero(x)*y", "(zero*x)*y"},
+		{"call0-add", "zero(x)+y", "zero*x+y"},
 	}
 	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
