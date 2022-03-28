@@ -28,10 +28,10 @@ type parsectx struct {
 	names map[string]bool
 	// funcs is the set of function names that trigger special parsing for ids.
 	funcs map[string]Func
-	// resv is a reserved parsed node. parsearglist sets this when it parses a
+	// rv is a reserved parsed node. parsearglist sets this when it parses a
 	// single parenthesized term so that the parser can back it out to an
 	// implicit multiplication if the function is niladic.
-	resv *node
+	rv *node
 	// wseof is a string containing the whitespace characters that trigger an
 	// EOF token from the lexer.
 	wseof string

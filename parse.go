@@ -95,7 +95,7 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 	if n == nil {
 		return nil, nil
 	}
-	if p.resv != nil {
+	if p.reserved() {
 		// parselhs parsed a niladic function followed by a parenthesized term.
 		// So, the parsing here is as if we encountered an open bracket, except
 		// that the contents are already parsed and valid.
@@ -103,8 +103,7 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 		if !prec.moreBinding(until) {
 			return n, nil
 		}
-		r := p.resv
-		p.resv = nil
+		r := p.take()
 		r, err := parseonto(scan, p, prec, r)
 		if err != nil {
 			return nil, err
@@ -297,16 +296,15 @@ func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (
 			if err != nil {
 				return nil, nil, err
 			}
-			if p.resv != nil {
+			if p.reserved() {
 				// The exponentiated term was itself a niladic function with a
 				// parenthesized expression following it, like fn^pi(x), where
 				// p.resv is (x). If we can call fn with one argument, then x
 				// is it; if zero, then x is an implicit multiplication.
 				switch {
 				case fn.CanCall(1):
-					args := &node{kind: nodeArg, left: p.resv}
+					args := &node{kind: nodeArg, left: p.take()}
 					exp := &node{kind: nodePow, right: up}
-					p.resv = nil
 					return args, exp, nil
 				case fn.CanCall(0):
 					exp := &node{kind: nodePow, right: up}
@@ -367,14 +365,14 @@ func parsecall(scan *lexer, p *parsectx, until operator, fn Func, name string) (
 			return nil, nil, &BracketError{Col: end.pos, Left: tok.text, Right: end.text}
 		}
 		if !fn.CanCall(len) {
-			if p.resv != nil && fn.CanCall(0) {
+			if p.reserved() && fn.CanCall(0) {
 				// If fn is niladic, convert from fn(a) to fn()*a.
 				return nil, nil, nil
 			}
-			p.resv = nil
+			p.take()
 			return nil, nil, &CallError{Col: tok.pos, Func: name, Len: len}
 		}
-		p.resv = nil
+		p.take()
 		return n, nil, nil
 	case tokenClose, tokenSep, tokenEOF:
 		if !fn.CanCall(0) {
@@ -422,7 +420,7 @@ func parsearglist(scan *lexer, p *parsectx, open string) (*node, int, error) {
 				// func(a). If func is niladic, then this is an implicit
 				// multiplication. Reserve the rhs so that the parser can
 				// convert from a function call.
-				p.resv = rhs
+				p.reserve(rhs)
 			}
 			return n.right, len + 1, nil
 		case tokenSep:
@@ -477,6 +475,27 @@ func itShouldNotHaveEndedThisWay(tok lexToken, match int) error {
 	default:
 		panic("expressions: it really should not have ended this way: " + tok.String())
 	}
+}
+
+// reserve sets the reserved parsed node in the context. Panics if there is
+// already a reserved node.
+func (p *parsectx) reserve(n *node) {
+	if p.rv != nil {
+		panic("expressions: reserve with a node reserved")
+	}
+	p.rv = n
+}
+
+// reserved returns whether there is a reserved node.
+func (p *parsectx) reserved() bool {
+	return p.rv != nil
+}
+
+// take removes and returns the reserved node.
+func (p *parsectx) take() *node {
+	r := p.rv
+	p.rv = nil
+	return r
 }
 
 // Vars returns the variable names used when evaluating the expression.
