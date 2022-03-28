@@ -95,27 +95,27 @@ func parseterm(scan *lexer, p *parsectx, until operator) (*node, error) {
 	if n == nil {
 		return nil, nil
 	}
-	if p.reserved() {
-		// parselhs parsed a niladic function followed by a parenthesized term.
-		// So, the parsing here is as if we encountered an open bracket, except
-		// that the contents are already parsed and valid.
-		prec := termprec
-		if !prec.moreBinding(until) {
-			return n, nil
-		}
-		r := p.take()
-		r, err := parseonto(scan, p, prec, r)
-		if err != nil {
-			return nil, err
-		}
-		n = &node{kind: nodeMul, left: n, right: r}
-	}
 	return parseonto(scan, p, until, n)
 }
 
 // parseonto parses assuming that n is the lhs of the expression.
 func parseonto(scan *lexer, p *parsectx, until operator, n *node) (*node, error) {
 	for {
+		if p.reserved() {
+			// We parsed a niladic function followed by a parenthesized term.
+			// So, the parsing here is as if we encountered an open bracket, except
+			// that the contents are already parsed and valid.
+			prec := termprec
+			if !prec.moreBinding(until) {
+				return n, nil
+			}
+			r := p.take()
+			r, err := parseonto(scan, p, prec, r)
+			if err != nil {
+				return nil, err
+			}
+			n = &node{kind: nodeMul, left: n, right: r}
+		}
 		tok, err := scan.next(p.wseof)
 		if err != nil {
 			return nil, err

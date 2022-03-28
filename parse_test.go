@@ -181,6 +181,7 @@ func TestParseTrees(t *testing.T) {
 
 		{"call0-mul", "zero(x)*y", "(zero*x)*y"},
 		{"call0-add", "zero(x)+y", "zero*x+y"},
+		{"call0-powcall0", "zero(y^zero(x))", "zero*((y^zero)*x)"},
 	}
 	preset := ParsingPreset(DisableDefaultFuncs(), ParseFuncs(testfns))
 	for _, c := range cases {
