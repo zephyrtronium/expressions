@@ -14,6 +14,7 @@ func FuzzParse(f *testing.F) {
 	f.Add("x")
 	f.Add("y")
 	f.Add("1×2")
+	f.Add("log(x, y)")
 	f.Fuzz(func(t *testing.T, s string) {
 		expressions.Parse(strings.NewReader(s))
 	})
